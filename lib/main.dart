@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'bookmark.dart'; 
 
 void main() {
   runApp(const MainApp());
@@ -9,8 +10,13 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(body: Center(child: Text('DAPURAME'))),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        fontFamily: 'Poppins',
+        useMaterial3: true,
+      ),
+      home: const BookmarkPage(), 
     );
   }
 }
