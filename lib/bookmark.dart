@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'navbar.dart';
+import 'bookmarkdetail.dart';
 
 class BookmarkPage extends StatelessWidget {
   const BookmarkPage({super.key});
@@ -40,7 +41,7 @@ class BookmarkPage extends StatelessWidget {
                   icon: Icon(Icons.search, color: Color(0xFF662B0E)),
                   hintText: 'Cari Produk',
                   hintStyle: TextStyle(
-                    fontSize: 17,
+                    fontSize: 16,
                     color: Color(0xFFB7B7B7),
                     fontWeight: FontWeight.w400,
                   ),
@@ -54,7 +55,7 @@ class BookmarkPage extends StatelessWidget {
               child: ListView(
                 children: const [
                   BookmarkCard(
-                    imagePath: 'assets/images/tahubakso.jpeg',
+                    imagePath: 'assets/images/tahubakso.jpg',
                     title: 'Tahu Bakso',
                     subtitle: 'Camilan gurih yang terdiri...',
                     rating: 4,
@@ -97,12 +98,22 @@ class BookmarkCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
       child: ListTile(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) =>
+                      BookmarkDetailPage(imagePath: imagePath, title: title),
+            ),
+          );
+        },
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: Image.asset(
             imagePath,
-            width: 60,
-            height: 60,
+            width: 75,
+            height: 68,
             fit: BoxFit.cover,
           ),
         ),
@@ -127,7 +138,8 @@ class BookmarkCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Row(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: List.generate(
