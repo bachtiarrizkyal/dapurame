@@ -61,7 +61,7 @@ class BookmarkPage extends StatelessWidget {
                     rating: 4,
                   ),
                   BookmarkCard(
-                    imagePath: 'assets/images/nasigoreng.jpeg',
+                    imagePath: 'assets/images/nasigoreng.jpg',
                     title: 'Nasi Goreng',
                     subtitle: 'Cita rasa otentik khas Indonesia...',
                     rating: 4,
@@ -164,7 +164,114 @@ class BookmarkCard extends StatelessWidget {
             ),
           ],
         ),
-        trailing: const Icon(Icons.delete, color: Color(0xFFE68B2B)),
+        trailing: GestureDetector(
+          onTap: () {
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return Dialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Align(
+                          alignment: Alignment.topRight,
+                          child: GestureDetector(
+                            onTap: () => Navigator.of(context).pop(),
+                            child: const Icon(
+                              Icons.close,
+                              color: Color(0xFF4A2104),
+                            ),
+                          ),
+                        ),
+                        const Icon(
+                          Icons.delete,
+                          size: 120,
+                          color: Color(0xFFE68B2B),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Kamu yakin akan menghapus\nresep ini dari bookmark?',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF4A2104),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            InkWell(
+                              borderRadius: BorderRadius.circular(50),
+                              onTap: () {},
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.orange.withOpacity(0.1),
+                                      spreadRadius: 1,
+                                      blurRadius: 5,
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.close,
+                                  color: Color(0xFFE68B2B),
+                                  size: 28,
+                                ),
+                              ),
+                            ),
+
+                            // Vertical Line
+                            Container(
+                              height: 28,
+                              width: 0.5,
+                              color: Color(0xFFE68B2B),
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                            ),
+                            InkWell(
+                              borderRadius: BorderRadius.circular(50),
+                              onTap: () {},
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.orange.withOpacity(0.1),
+                                      spreadRadius: 1,
+                                      blurRadius: 5,
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.check,
+                                  color: Color(0xFFE68B2B),
+                                  size: 28,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+          child: const Icon(Icons.delete, color: Color(0xFFE68B2B)),
+        ),
       ),
     );
   }
