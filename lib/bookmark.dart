@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'navbar.dart';
 import 'bookmarkdetail.dart';
+import 'resepku.dart';
+import 'nutrisi.dart';
 
 class BookmarkPage extends StatelessWidget {
   const BookmarkPage({super.key});
@@ -72,7 +74,37 @@ class BookmarkPage extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: CustomNavbar(currentIndex: 3, onTap: (index) {}),
+      bottomNavigationBar: CustomNavbar(
+        currentIndex: 3,
+        onTap: (index) {
+          // Navigate to different pages
+          switch (index) {
+            case 0:
+              // Home - belum ada halaman, skip
+              break;
+            case 1:
+              // Nutrisi
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const NutrisiPage()),
+              );
+              break;
+            case 2:
+              // Resepku
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const ResepkuPage()),
+              );
+              break;
+            case 3:
+              // Bookmark - already here
+              break;
+            case 4:
+              // Profil - belum ada halaman, skip
+              break;
+          }
+        },
+      ),
     );
   }
 }

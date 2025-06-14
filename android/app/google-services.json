@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "23609113055",
+    "project_id": "dapurame-4c801",
+    "storage_bucket": "dapurame-4c801.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:23609113055:android:016dc58863f00c6d06ac6a",
+        "android_client_info": {
+          "package_name": "com.example.dapurame"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_G6ZCPTvXdSnXo4i3R2t9HhTKRSUBKVk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

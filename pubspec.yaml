@@ -9,6 +9,18 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  
+  # Firebase dependencies (versi yang kompatibel dengan minSdk 21)
+  firebase_core: ^2.24.2
+  cloud_firestore: ^4.13.6
+  firebase_auth: ^4.15.3
+  firebase_storage: ^11.6.0
+  
+  # Image picker untuk upload foto
+  image_picker: ^1.0.7
+  
+  # Permission handler
+  permission_handler: ^11.0.1
 
 dev_dependencies:
   flutter_test:
@@ -34,4 +46,3 @@ flutter:
           weight: 600
         - asset: assets/fonts/Poppins-Bold.ttf
           weight: 700
-
