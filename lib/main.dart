@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'resepku.dart';
+import 'home_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,7 +29,7 @@ class MainApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'Poppins', useMaterial3: true),
       // Start dari Resepku
-      home: const ResepkuPage(),
+      home: const HomePage(),
       // CRUD Resepku: home: const ResepkuPage(),
       // Test Firebase: home: const FirebaseTestPage(),
       // Bookmark page: home: const BookmarkPage(),
