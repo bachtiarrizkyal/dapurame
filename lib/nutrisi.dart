@@ -4,6 +4,7 @@ import 'navbar.dart';
 import 'nutrisi_detail.dart';
 import 'resepku.dart';
 import 'bookmark.dart';
+import 'home_page.dart';
 
 class NutrisiPage extends StatefulWidget {
   const NutrisiPage({super.key});
@@ -277,7 +278,11 @@ class _NutrisiPageState extends State<NutrisiPage> {
           // Navigate to different pages
           switch (index) {
             case 0:
-              // Home - belum ada halaman, skip
+              // Home
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const HomePage()),
+              );
               break;
             case 1:
               // Nutrisi - already here

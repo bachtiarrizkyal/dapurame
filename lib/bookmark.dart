@@ -3,6 +3,7 @@ import 'navbar.dart';
 import 'bookmarkdetail.dart';
 import 'resepku.dart';
 import 'nutrisi.dart';
+import 'home_page.dart';
 
 class BookmarkPage extends StatelessWidget {
   const BookmarkPage({super.key});
@@ -80,7 +81,11 @@ class BookmarkPage extends StatelessWidget {
           // Navigate to different pages
           switch (index) {
             case 0:
-              // Home - belum ada halaman, skip
+              // Home
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const HomePage()),
+              );
               break;
             case 1:
               // Nutrisi
