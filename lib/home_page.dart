@@ -25,8 +25,44 @@ void main() {
   );
 }
 
-class HomePage extends StatelessWidget {
+// [DATA BARU] Untuk item di carousel horizontal
+  final List<Map<String, String>> bannerItems = [
+    {
+      'image': 'assets/images/ramen.jpeg',
+      'tag': 'Resep Terbaru!',
+      'title': 'Ramen Ookamizu',
+    },
+    {
+      'image': 'assets/images/sushi.jpg', // GAMBAR BARU
+      'tag': 'Paling Favorit!',
+      'title': 'Sushi Shinomiya',
+    },
+    {
+      'image': 'assets/images/cake.jpg', // GAMBAR BARU
+      'tag': 'Hidangan Penutup!',
+      'title': 'Cake Berry',
+    },
+  ];
+
+// ubah dari StatelessWidget menjadi StatefulWidget
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+ @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  int _currentPageIndex = 0;
+  // Controller untuk PageView
+  final PageController _pageController = PageController();
+
+  // Jangan lupa dispose controller saat widget tidak lagi digunakan
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +70,7 @@ class HomePage extends StatelessWidget {
       backgroundColor: Color(0xFFFFFAF2), // Changed background color to light beige
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -129,83 +165,60 @@ class HomePage extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: 16.0),
-              Stack(
-                children: [
-                  Container(
-                    height: 200.0, // Adjust height as needed
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10.0),
-                      image: DecorationImage(
-                        image: AssetImage(
-                          'assets/images/ramen.jpeg',
-                        ), // Placeholder image
-                        fit: BoxFit.cover,
+              
+              // Memberi jarak antara container atas dan gambar ramen
+              SizedBox(height: 24.0),
+
+              // Mengganti ListView dengan PageView.builder
+               SizedBox(
+                height: 200.0,
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: bannerItems.length,
+                  // Callback ini akan terpanggil setiap kali halaman berganti
+                  onPageChanged: (index) {
+                    // Perbarui state dengan indeks baru, UI akan otomatis rebuild
+                    setState(() {
+                      _currentPageIndex = index;
+                    });
+                  },
+                  itemBuilder: (context, index) {
+                    final item = bannerItems[index];
+                    // Tambahkan padding di sini agar ada jarak antar item
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                      child: _buildBannerCard(
+                        image: item['image']!,
+                        tag: item['tag']!,
+                        title: item['title']!,
                       ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 10.0,
-                    left: 10.0,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 8.0,
-                        vertical: 4.0,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Color(
-                          0xFFFFF2DF,
-                        ), // A shade of red for the label
-                        borderRadius: BorderRadius.circular(5.0),
-                      ),
-                      child: Text(
-                        'Resep Terbaru!',
-                        style: TextStyle(
-                          color: Color(0xFF8B4513),
-                          fontSize: 12.0,
-                          fontWeight: FontWeight.w900,
-                        ), // Adjusted font weight
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 10.0,
-                    right: 10.0,
-                    child: Text(
-                      'Ramen Ookamizu',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20.0,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+                    );
+                  },
+                ),
               ),
+
               SizedBox(height: 18.0),
+              // Dot Indicator yang interaktif
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (index) {
+                children: List.generate(bannerItems.length, (index) {
                   return Container(
                     margin: EdgeInsets.symmetric(horizontal: 4.0),
                     width: 8.0,
                     height: 8.0,
                     decoration: BoxDecoration(
-                      color:
-                          index == 0
-                              ? Color(0xFF8B4513)
-                              : Color.fromRGBO(
-                                230,
-                                139,
-                                43,
-                                1,
-                              ), // Active dot color and inactive dot color
+                      // Warna ditentukan oleh state _currentPageIndex
+                      color: _currentPageIndex == index
+                          ? Color(0xFF8B4513) // Warna aktif
+                          : Color.fromRGBO(230, 139, 43, 0.5), // Warna non-aktif
                       shape: BoxShape.circle,
                     ),
                   );
                 }),
               ),
+              
               SizedBox(height: 26.0),
+          
               Text(
                 'Paling Diminati',
                 style: TextStyle(
@@ -222,14 +235,14 @@ class HomePage extends StatelessWidget {
                   crossAxisCount: 2,
                   crossAxisSpacing: 16.0,
                   mainAxisSpacing: 16.0,
-                  childAspectRatio: 0.7, // Adjusted to give more vertical space
+                  childAspectRatio: 0.65, // Adjusted to give more vertical space
                 ),
-                itemCount: 4, // Number of recipe cards
+                itemCount: 6, // Number of recipe cards
                 itemBuilder: (context, index) {
                   final List<Map<String, String>> recipes = [
                     {
                       'imagePath': 'assets/images/risolmayo.jpeg',
-                      'rating': '8.5',
+                      'rating': '9.2',
                       'title': 'Risol Mayo',
                       'description':
                           'Risol mayo adalah jajanan tradisional berbentuk gulungan yang memiliki berbagai...',
@@ -262,8 +275,28 @@ class HomePage extends StatelessWidget {
                       'rating': '8.5',
                       'title': 'Tahu Bakso',
                       'description':
-                          'Tahu Bakso adalah kuliner yang terdiri dari tahu goreng, lontong, kentang, dan sedikit taoge yang disiram...',
+                          'Tahu Bakso adalah kuliner asal Semarang yang dibuat dari tahu yang tengahnya diberi isi bakso.',
                       'author': 'Ruli - ITS',
+                      'time': '17 mins',
+                      'profileImagePath': 'assets/images/profilemale.jpeg',
+                    },
+                    {
+                      'imagePath': 'assets/images/tahu-tek.jpeg',
+                      'rating': '8.9',
+                      'title': 'Tahu Tek',
+                      'description':
+                          'Tahu Tek adalah kuliner yang terdiri dari tahu goreng, lontong, kentang, dan sedikit taoge yang disiram...',
+                      'author': 'Ruli - ITS',
+                      'time': '17 mins',
+                      'profileImagePath': 'assets/images/profilemale.jpeg',
+                    },
+                    {
+                      'imagePath': 'assets/images/sushi.jpg',
+                      'rating': '9.5',
+                      'title': 'Sushi',
+                      'description':
+                          'Sushi adalah makanan Jepang yang terdiri dari nasi yang dibentuk bersama lauk (neta) berupa makanan laut, daging, sayuran bakar atau sudah dimasak.',
+                      'author': 'Rony - Ubaya',
                       'time': '17 mins',
                       'profileImagePath': 'assets/images/profilemale.jpeg',
                     },
@@ -324,6 +357,104 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  // Untuk membuat satu item di carousel
+  Widget _buildBannerCard({
+    required String image, 
+    required String tag, 
+    required String title
+    }) {
+    return Container(
+      margin: const EdgeInsets.only(right: 16.0),
+      decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(10.0),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.3),
+          spreadRadius: 2,
+          blurRadius: 10,
+          offset: Offset(0, 5),
+        )
+      ],
+    ),
+    // Gunakan ClipRRect untuk memastikan semua anak (gambar & gradasi)
+    // ikut terpotong sesuai bentuk rounded corner.
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(10.0),
+      child: Stack(
+        fit: StackFit.expand, // Agar semua anak Stack mengisi ruang
+        children: [
+          // LAPISAN 1: GAMBAR (paling bawah)
+          Image.asset(
+            image,
+            fit: BoxFit.cover,
+          ),
+
+          // LAPISAN 2: GRADASI BAYANGAN (di tengah)
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withOpacity(0.8),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: [0.4, 1.0], // Bayangan baru mulai dari 40% atas
+              ),
+            ),
+          ),
+          // ==========================================================
+
+          // LAPISAN 3: TAG (paling atas)
+          Positioned(
+            top: 10.0,
+            left: 10.0,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+              decoration: BoxDecoration(
+                color: Color(0xFFFFF2DF),
+                borderRadius: BorderRadius.circular(5.0),
+              ),
+              child: Text(
+                tag,
+                style: TextStyle(
+                  color: Color(0xFF8B4513),
+                  fontSize: 12.0,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+
+          // LAPISAN 4: JUDUL (paling atas)
+          Positioned(
+            bottom: 10.0,
+            right: 10.0,
+            child: Text(
+              title,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20.0,
+                fontWeight: FontWeight.bold,
+                // Shadow pada teks bisa dipertahankan atau dihapus
+                // karena sudah dibantu oleh gradasi background.
+                shadows: [
+                  Shadow(
+                    blurRadius: 10.0,
+                    color: Colors.black.withOpacity(0.7),
+                    offset: Offset(2.0, 2.0),
+                  )
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+ 
   Widget _buildRecipeCard({
     required String imagePath,
     required String rating,
@@ -347,7 +478,7 @@ class HomePage extends StatelessWidget {
           ),
         ],
       ),
-      // Kita tidak lagi butuh Column di sini karena strukturnya lebih sederhana
+
       // Langsung ke kontennya
       child: Column(
         mainAxisSize:
@@ -369,6 +500,7 @@ class HomePage extends StatelessWidget {
                   ),
                 ],
               ),
+
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10.0),
                 child: Image.asset(
@@ -432,9 +564,8 @@ class HomePage extends StatelessWidget {
                 ),
 
                 // Ganti Spacer() kembali menjadi SizedBox untuk jarak yang pasti
-                SizedBox(
-                  height: 14.0,
-                ), // Anda bisa sesuaikan tingginya (misal: 12, 16, dll)
+                SizedBox(height: 14.0,),
+                
                 // Baris Avatar dan Waktu
                 Row(
                   children: [
