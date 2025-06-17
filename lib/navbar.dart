@@ -17,28 +17,24 @@ class CustomNavbar extends StatelessWidget {
         topLeft: Radius.circular(30),
         topRight: Radius.circular(30),
       ),
-      child: Container(
-        height: 50,
-        color: const Color(0xFFFFF2DF),
-        child: BottomNavigationBar(
-          backgroundColor: const Color(0xFFFFF2DF),
-          selectedItemColor: const Color(0xFF662B0E),
-          unselectedItemColor: const Color(0xFFB39B93),
-          currentIndex: currentIndex,
-          type: BottomNavigationBarType.fixed,
-          onTap: onTap,
-          selectedLabelStyle: const TextStyle(fontSize: 10),
-          unselectedLabelStyle: const TextStyle(fontSize: 10),
-          selectedIconTheme: const IconThemeData(size: 24),
-          unselectedIconTheme: const IconThemeData(size: 24),
-          items: [
-            _buildNavItem(icon: Icons.home, label: 'Home', index: 0),
-            _buildNavItem(icon: Icons.restaurant, label: 'Nutrisi', index: 1),
-            _buildNavItem(icon: Icons.menu_book, label: 'Resepku', index: 2),
-            _buildNavItem(icon: Icons.bookmark, label: 'Bookmark', index: 3),
-            _buildNavItem(icon: Icons.person, label: 'Profil', index: 4),
-          ],
-        ),
+      child: BottomNavigationBar(
+        backgroundColor: const Color(0xFFFFF2DF),
+        selectedItemColor: const Color(0xFF662B0E),
+        unselectedItemColor: const Color(0xFFB39B93),
+        currentIndex: currentIndex,
+        type: BottomNavigationBarType.fixed,
+        onTap: onTap,
+        selectedLabelStyle: const TextStyle(fontSize: 10),
+        unselectedLabelStyle: const TextStyle(fontSize: 10),
+        selectedIconTheme: const IconThemeData(size: 24),
+        unselectedIconTheme: const IconThemeData(size: 24),
+        items: [
+          _buildNavItem(icon: Icons.home, label: 'Home', index: 0),
+          _buildNavItem(icon: Icons.restaurant, label: 'Nutrisi', index: 1),
+          _buildNavItem(icon: Icons.menu_book, label: 'Resepku', index: 2),
+          _buildNavItem(icon: Icons.bookmark, label: 'Bookmark', index: 3),
+          _buildNavItem(icon: Icons.person, label: 'Profil', index: 4),
+        ],
       ),
     );
   }
@@ -52,23 +48,30 @@ class CustomNavbar extends StatelessWidget {
 
     return BottomNavigationBarItem(
       icon: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon),
-          const SizedBox(height: 4),
+          Icon(
+            icon,
+            color:
+                isSelected ? const Color(0xFF662B0E) : const Color(0xFFB39B93),
+          ),
           Text(
             label,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 10,
               color:
                   isSelected
                       ? const Color(0xFF662B0E)
                       : const Color(0xFFB39B93),
             ),
           ),
-          const SizedBox(height: 2),
-          isSelected
-              ? Container(height: 3, width: 100, color: const Color(0xFF662B0E))
-              : const SizedBox(height: 2),
+          if (isSelected)
+            Container(
+              margin: const EdgeInsets.only(top: 2),
+              height: 3,
+              width: 90,
+              color: const Color(0xFF662B0E),
+            ),
         ],
       ),
       label: '',

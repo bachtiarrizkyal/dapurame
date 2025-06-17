@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart'; // <-- 1. Import Firebase Core
-import 'firebase_options.dart'; // <-- 2. Import file konfigurasi Firebase
-import 'package:dapurame/splash_screen.dart'; // Pastikan path ini benar
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:dapurame/splash_screen.dart'; // Menggunakan SplashScreen sebagai halaman awal
 
-// 3. Ubah fungsi main menjadi async
+// Fungsi main diubah menjadi async untuk inisialisasi Firebase
 void main() async {
-  // 4. Pastikan semua widget binding sudah siap
+  // Pastikan semua widget binding sudah siap sebelum menjalankan kode async
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 5. Inisialisasi Firebase dengan konfigurasi platform Anda saat ini
+  // Inisialisasi Firebase dengan konfigurasi platform Anda saat ini
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Jalankan aplikasi setelah Firebase siap
@@ -23,7 +23,9 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'Poppins', useMaterial3: true),
-      // Halaman awal Anda tetap SplashScreen, ini sudah benar.
+      // Halaman awal aplikasi diatur ke SplashScreen.
+      // Nantinya, SplashScreen yang akan menentukan apakah akan menampilkan
+      // halaman login atau halaman utama (HomePage).
       home: const SplashScreen(),
     );
   }

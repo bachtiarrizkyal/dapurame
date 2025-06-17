@@ -1,28 +1,30 @@
-// lib/verifikasi_email.dart
-
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:dapurame/bookmark.dart'; // Halaman tujuan setelah verifikasi
+import 'package:dapurame/masuk.dart'; // Import halaman masuk untuk navigasi saat batal
 
 class VerifikasiEmailScreen extends StatefulWidget {
-  const VerifikasiEmailScreen({super.key});
+  // 1. Tambahkan variabel untuk menampung email
+  final String? email;
+
+  // 2. Tambahkan email ke constructor
+  const VerifikasiEmailScreen({super.key, this.email});
 
   @override
   State<VerifikasiEmailScreen> createState() => _VerifikasiEmailScreenState();
 }
 
 class _VerifikasiEmailScreenState extends State<VerifikasiEmailScreen> {
-  bool _isEmailVerified = false;
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    // Kirim email verifikasi segera setelah halaman dimuat
-    FirebaseAuth.instance.currentUser?.sendEmailVerification();
+    // Email sudah dikirim dari halaman daftar, jadi baris ini sebenarnya bisa dinonaktifkan
+    // untuk menghindari pengiriman ganda, tapi tidak masalah jika tetap ada.
+    // FirebaseAuth.instance.currentUser?.sendEmailVerification();
 
-    // Mulai timer untuk memeriksa status verifikasi setiap 3 detik
     _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
       _checkEmailVerified();
     });
@@ -30,13 +32,21 @@ class _VerifikasiEmailScreenState extends State<VerifikasiEmailScreen> {
 
   Future<void> _checkEmailVerified() async {
     User? user = FirebaseAuth.instance.currentUser;
-    // Reload user untuk mendapatkan status terbaru dari server Firebase
     await user?.reload();
+    user =
+        FirebaseAuth
+            .instance
+            .currentUser; // Ambil ulang data user setelah reload
 
     if (user != null && user.emailVerified) {
-      _timer?.cancel(); // Hentikan timer
+      _timer?.cancel();
       if (mounted) {
-        // Arahkan ke halaman utama setelah verifikasi berhasil
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Verifikasi berhasil! Selamat datang.'),
+            backgroundColor: Colors.green,
+          ),
+        );
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const BookmarkPage()),
         );
@@ -46,14 +56,15 @@ class _VerifikasiEmailScreenState extends State<VerifikasiEmailScreen> {
 
   @override
   void dispose() {
-    // Pastikan timer dihentikan saat halaman ditutup untuk menghindari memory leak
     _timer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    User? user = FirebaseAuth.instance.currentUser;
+    // Gunakan email dari widget jika ada, jika tidak, ambil dari user saat ini.
+    final emailToShow =
+        widget.email ?? FirebaseAuth.instance.currentUser?.email;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F3ED),
@@ -83,7 +94,8 @@ class _VerifikasiEmailScreenState extends State<VerifikasiEmailScreen> {
               ),
               const SizedBox(height: 15),
               Text(
-                'Link verifikasi telah dikirim ke email:\n${user?.email}\n\nSilakan periksa kotak masuk atau folder spam Anda dan klik link tersebut untuk melanjutkan.',
+                // 3. Tampilkan email yang diterima dari halaman sebelumnya
+                'Link verifikasi telah dikirim ke email:\n${emailToShow ?? 'email tidak ditemukan'}\n\nSilakan periksa kotak masuk atau folder spam Anda.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 16, color: Colors.grey[700]),
               ),
@@ -92,10 +104,11 @@ class _VerifikasiEmailScreenState extends State<VerifikasiEmailScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    user?.sendEmailVerification();
+                    FirebaseAuth.instance.currentUser?.sendEmailVerification();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Email verifikasi baru telah dikirim.'),
+                        backgroundColor: Colors.blue,
                       ),
                     );
                   },
@@ -110,12 +123,21 @@ class _VerifikasiEmailScreenState extends State<VerifikasiEmailScreen> {
               ),
               const SizedBox(height: 10),
               TextButton(
-                onPressed: () {
-                  FirebaseAuth.instance.signOut();
-                  Navigator.of(context).pop();
+                onPressed: () async {
+                  _timer?.cancel(); // Hentikan timer sebelum logout
+                  await FirebaseAuth.instance.signOut();
+                  // Arahkan kembali ke halaman Masuk setelah batal
+                  if (mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (context) => const MasukScreen(),
+                      ),
+                      (Route<dynamic> route) => false,
+                    );
+                  }
                 },
                 child: const Text(
-                  'Batal',
+                  'Batal & Kembali ke Halaman Masuk',
                   style: TextStyle(color: Color(0xFF5A3E2D)),
                 ),
               ),
