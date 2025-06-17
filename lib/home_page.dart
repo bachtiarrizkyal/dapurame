@@ -4,6 +4,7 @@ import 'navbar.dart';
 import 'resepku.dart';
 import 'bookmark.dart';
 import 'nutrisi.dart';
+import 'notification_page.dart';
 
 void main() {
   // Mengatur style status bar agar menyatu dengan desain
@@ -91,7 +92,10 @@ class _HomePageState extends State<HomePage> {
                       color: Color(0xFF8B4513),
                     ), // Saddle Brown color
                     onPressed: () {
-                      // Handle notification icon press
+                       Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const NotificationPage()),
+                      );
                     },
                   ),
                 ],
