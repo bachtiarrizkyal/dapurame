@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:dapurame/masuk.dart'; // <<< Import halaman MasukScreen Anda
+import 'package:dapurame/masuk.dart'; // Import halaman MasukScreen Anda
+import 'package:dapurame/daftar.dart'; // <<< TAMBAHKAN IMPORT INI untuk halaman DaftarScreen Anda
 
 class MasukAtauDaftarScreen extends StatelessWidget {
   const MasukAtauDaftarScreen({super.key});
@@ -79,8 +80,18 @@ class MasukAtauDaftarScreen extends StatelessWidget {
                       child: OutlinedButton(
                         onPressed: () {
                           debugPrint('Tombol Daftar ditekan!');
-                          // Navigasi ke halaman Registrasi
-                          // Navigator.push(context, MaterialPageRoute(builder: (context) => RegisterPage()));
+                          // --- PERUBAHAN DI SINI ---
+                          // Navigasi ke halaman DaftarScreen
+                          Navigator.push(
+                            // Menggunakan push biasa agar bisa kembali
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) =>
+                                      const DaftarScreen(), // <<< NAVIGASI KE DAFTARSCREEN
+                            ),
+                          );
+                          // --- AKHIR PERUBAHAN ---
                         },
                         style: OutlinedButton.styleFrom(
                           backgroundColor: Colors.white,

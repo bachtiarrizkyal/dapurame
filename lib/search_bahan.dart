@@ -24,7 +24,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
 
   Future<void> _loadBahanData() async {
     try {
-      // Data sudah fix dari database TKPI asli 
+      // Data sudah fix dari database TKPI asli
       _allBahan = [
         {
           'nama': 'Abon haruwan',
@@ -33,7 +33,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '37.0',
           'karbohidrat': '21.3',
           'kategori': 'Ikan dsb',
-          'kode': 'GP053'
+          'kode': 'GP053',
         },
         {
           'nama': 'Abon ikan',
@@ -42,7 +42,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '20.2',
           'karbohidrat': '36.1',
           'kategori': 'Ikan dsb',
-          'kode': 'GP054'
+          'kode': 'GP054',
         },
         {
           'nama': 'Ayam kampung',
@@ -51,7 +51,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '25.0',
           'karbohidrat': '0.0',
           'kategori': 'Daging',
-          'kode': 'DG001'
+          'kode': 'DG001',
         },
         {
           'nama': 'Beras putih',
@@ -60,7 +60,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '0.7',
           'karbohidrat': '78.9',
           'kategori': 'Padi-padian',
-          'kode': 'PD001'
+          'kode': 'PD001',
         },
         {
           'nama': 'Tahu putih',
@@ -69,7 +69,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '4.6',
           'karbohidrat': '1.6',
           'kategori': 'Kacang-kacangan',
-          'kode': 'KC001'
+          'kode': 'KC001',
         },
         {
           'nama': 'Tempe',
@@ -78,7 +78,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '4.0',
           'karbohidrat': '9.4',
           'kategori': 'Kacang-kacangan',
-          'kode': 'KC002'
+          'kode': 'KC002',
         },
         {
           'nama': 'Cabai merah besar',
@@ -87,7 +87,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '0.3',
           'karbohidrat': '7.3',
           'kategori': 'Sayuran',
-          'kode': 'SY001'
+          'kode': 'SY001',
         },
         {
           'nama': 'Bawang merah',
@@ -96,7 +96,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '0.3',
           'karbohidrat': '9.2',
           'kategori': 'Sayuran',
-          'kode': 'SY002'
+          'kode': 'SY002',
         },
         {
           'nama': 'Bawang putih',
@@ -105,7 +105,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '0.2',
           'karbohidrat': '23.0',
           'kategori': 'Sayuran',
-          'kode': 'SY003'
+          'kode': 'SY003',
         },
         {
           'nama': 'Wortel',
@@ -114,7 +114,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '0.3',
           'karbohidrat': '9.3',
           'kategori': 'Sayuran',
-          'kode': 'SY004'
+          'kode': 'SY004',
         },
         {
           'nama': 'Kentang',
@@ -123,7 +123,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '0.2',
           'karbohidrat': '13.5',
           'kategori': 'Sayuran',
-          'kode': 'SY005'
+          'kode': 'SY005',
         },
         {
           'nama': 'Tomat masak',
@@ -132,7 +132,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '0.3',
           'karbohidrat': '4.2',
           'kategori': 'Sayuran',
-          'kode': 'SY006'
+          'kode': 'SY006',
         },
         {
           'nama': 'Garam dapur',
@@ -141,7 +141,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '0.0',
           'karbohidrat': '0.0',
           'kategori': 'Bumbu',
-          'kode': 'BM001'
+          'kode': 'BM001',
         },
         {
           'nama': 'Gula pasir',
@@ -150,7 +150,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '0.0',
           'karbohidrat': '94.0',
           'kategori': 'Gula',
-          'kode': 'GL001'
+          'kode': 'GL001',
         },
         {
           'nama': 'Minyak kelapa',
@@ -159,7 +159,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '100.0',
           'karbohidrat': '0.0',
           'kategori': 'Minyak',
-          'kode': 'MY001'
+          'kode': 'MY001',
         },
         {
           'nama': 'Santan kental',
@@ -168,7 +168,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '34.0',
           'karbohidrat': '4.0',
           'kategori': 'Kelapa',
-          'kode': 'KL001'
+          'kode': 'KL001',
         },
         {
           'nama': 'Telur ayam',
@@ -177,7 +177,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '10.8',
           'karbohidrat': '0.7',
           'kategori': 'Telur',
-          'kode': 'TL001'
+          'kode': 'TL001',
         },
         {
           'nama': 'Daging sapi',
@@ -186,7 +186,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '14.0',
           'karbohidrat': '0.0',
           'kategori': 'Daging',
-          'kode': 'DG002'
+          'kode': 'DG002',
         },
         {
           'nama': 'Ikan bandeng',
@@ -195,7 +195,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '4.8',
           'karbohidrat': '0.0',
           'kategori': 'Ikan dsb',
-          'kode': 'IK001'
+          'kode': 'IK001',
         },
         {
           'nama': 'Udang segar',
@@ -204,7 +204,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
           'lemak': '0.2',
           'karbohidrat': '0.1',
           'kategori': 'Ikan dsb',
-          'kode': 'IK002'
+          'kode': 'IK002',
         },
         // Data ini dari file CSV asli yang sudah diupload
         // Total ada 1149 bahan makanan di database
@@ -228,10 +228,13 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
       if (query.isEmpty) {
         _filteredBahan = List.from(_allBahan);
       } else {
-        _filteredBahan = _allBahan
-            .where((bahan) =>
-                bahan['nama'].toLowerCase().contains(query.toLowerCase()))
-            .toList();
+        _filteredBahan =
+            _allBahan
+                .where(
+                  (bahan) =>
+                      bahan['nama'].toLowerCase().contains(query.toLowerCase()),
+                )
+                .toList();
       }
     });
   }
@@ -295,7 +298,7 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Hasil pencarian "${_searchQuery}": ${_filteredBahan.length} bahan',
+                  'Hasil pencarian "$_searchQuery": ${_filteredBahan.length} bahan',
                   style: const TextStyle(
                     fontSize: 14,
                     color: Color(0xFF4A2104),
@@ -309,55 +312,56 @@ class _SearchBahanPageState extends State<SearchBahanPage> {
 
           // Bahan List
           Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      color: Color(0xFFE68B2B),
-                    ),
-                  )
-                : _filteredBahan.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.search_off,
-                              size: 80,
-                              color: Colors.grey[400],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _searchQuery.isEmpty
-                                  ? 'Data bahan makanan tidak tersedia'
-                                  : 'Bahan "$_searchQuery" tidak ditemukan',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Coba cari dengan kata kunci lain',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[500],
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: _filteredBahan.length,
-                        itemBuilder: (context, index) {
-                          final bahan = _filteredBahan[index];
-                          return BahanCard(
-                            bahan: bahan,
-                            onTap: () => _selectBahan(bahan),
-                          );
-                        },
+            child:
+                _isLoading
+                    ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFE68B2B),
                       ),
+                    )
+                    : _filteredBahan.isEmpty
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            size: 80,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _searchQuery.isEmpty
+                                ? 'Data bahan makanan tidak tersedia'
+                                : 'Bahan "$_searchQuery" tidak ditemukan',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Coba cari dengan kata kunci lain',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                    : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: _filteredBahan.length,
+                      itemBuilder: (context, index) {
+                        final bahan = _filteredBahan[index];
+                        return BahanCard(
+                          bahan: bahan,
+                          onTap: () => _selectBahan(bahan),
+                        );
+                      },
+                    ),
           ),
         ],
       ),
@@ -375,11 +379,7 @@ class BahanCard extends StatelessWidget {
   final Map<String, dynamic> bahan;
   final VoidCallback onTap;
 
-  const BahanCard({
-    super.key,
-    required this.bahan,
-    required this.onTap,
-  });
+  const BahanCard({super.key, required this.bahan, required this.onTap});
 
   Color _getCategoryColor(String kategori) {
     switch (kategori.toLowerCase()) {
@@ -449,10 +449,7 @@ class BahanCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               'Energi: ${bahan['energi']} kkal • Protein: ${bahan['protein']}g',
-              style: const TextStyle(
-                fontSize: 11,
-                color: Color(0xFF4A2104),
-              ),
+              style: const TextStyle(fontSize: 11, color: Color(0xFF4A2104)),
             ),
           ],
         ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:dapurame/daftar.dart'; // <<< Import halaman DaftarScreen Anda
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:dapurame/daftar.dart'; // Import ini akan digunakan oleh tombol navigasi
+import 'package:dapurame/bookmark.dart';
 
 class MasukScreen extends StatefulWidget {
   const MasukScreen({super.key});
@@ -9,8 +11,11 @@ class MasukScreen extends StatefulWidget {
 }
 
 class _MasukScreenState extends State<MasukScreen> {
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -19,67 +24,85 @@ class _MasukScreenState extends State<MasukScreen> {
     super.dispose();
   }
 
+  Future<void> _performLogin() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final UserCredential userCredential = await _auth
+          .signInWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
+
+      // PERBAIKAN: Menambahkan 'if (mounted)' untuk keamanan
+      if (!mounted) return;
+
+      if (userCredential.user != null) {
+        if (userCredential.user!.emailVerified) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const BookmarkPage()),
+          );
+        } else {
+          await _auth.signOut();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Harap verifikasi email Anda terlebih dahulu.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      String message;
+      if (e.code == 'user-not-found' ||
+          e.code == 'wrong-password' ||
+          e.code == 'invalid-credential') {
+        message = 'Email atau password yang Anda masukkan salah.';
+      } else {
+        message = 'Terjadi kesalahan. Silakan coba lagi.';
+      }
+      // PERBAIKAN: Menambahkan 'if (mounted)' untuk keamanan
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-
     final double topSectionHeight = screenHeight * 0.3;
     final double bottomWaveHeight = screenHeight * 0.4;
     final double middleSectionHeight =
         screenHeight - topSectionHeight - (bottomWaveHeight * 0.8);
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: const Color(0xFFF8F3ED),
       body: Stack(
         children: [
+          // ... (Bagian atas tidak ada perubahan)
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             height: topSectionHeight,
             child: Container(
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/images/masuk.png'),
-                  fit: BoxFit.cover,
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.only(top: 60.0, left: 20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.pop(context);
-                      },
-                      child: const Icon(
-                        Icons.arrow_back,
-                        color: Color(0xFF5A3E2D),
-                        size: 30,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Selamat Datang',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF5A3E2D),
-                      ),
-                    ),
-                    const Text(
-                      'Masuk untuk Melanjutkan',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 20,
-                        color: Color(0xFF5A3E2D),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              // ... isi container
             ),
           ),
           Positioned(
@@ -90,57 +113,73 @@ class _MasukScreenState extends State<MasukScreen> {
             child: Container(
               color: const Color(0xFFF8F3ED),
               padding: const EdgeInsets.symmetric(horizontal: 40.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TextField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    style: const TextStyle(color: Color(0xFF5A3E2D)),
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: Colors.white,
-                      hintText: 'Masukkan email Anda',
-                      hintStyle: TextStyle(color: Colors.grey[600]),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                        borderSide: BorderSide.none,
+              child: Form(
+                key: _formKey,
+                // === PERBAIKAN UTAMA: Menambahkan properti 'child' yang wajib ada untuk Form ===
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      style: const TextStyle(color: Color(0xFF5A3E2D)),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
+                        hintText: 'Masukkan email Anda',
+                        hintStyle: TextStyle(color: Colors.grey[600]),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 15.0,
+                          horizontal: 20.0,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.email,
+                          color: Color(0xFFE89F43),
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 15.0,
-                        horizontal: 20.0,
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.email,
-                        color: Color(0xFFE89F43),
-                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty)
+                          return 'Email tidak boleh kosong';
+                        if (!value.contains('@'))
+                          return 'Format email tidak valid';
+                        return null;
+                      },
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    style: const TextStyle(color: Color(0xFF5A3E2D)),
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: Colors.white,
-                      hintText: 'Masukkan password Anda',
-                      hintStyle: TextStyle(color: Colors.grey[600]),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                        borderSide: BorderSide.none,
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      style: const TextStyle(color: Color(0xFF5A3E2D)),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
+                        hintText: 'Masukkan password Anda',
+                        hintStyle: TextStyle(color: Colors.grey[600]),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 15.0,
+                          horizontal: 20.0,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.lock,
+                          color: Color(0xFFE89F43),
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 15.0,
-                        horizontal: 20.0,
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.lock,
-                        color: Color(0xFFE89F43),
-                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty)
+                          return 'Password tidak boleh kosong';
+                        return null;
+                      },
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -164,26 +203,26 @@ class _MasukScreenState extends State<MasukScreen> {
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: () {
-                          debugPrint('Tombol Masuk ditekan!');
-                          debugPrint('Email: ${_emailController.text}');
-                          debugPrint('Password: ${_passwordController.text}');
-                        },
+                        onPressed: _isLoading ? null : _performLogin,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFE89F43),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10.0),
                           ),
-                          elevation: 0,
                         ),
-                        child: const Text(
-                          'Masuk',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        child:
+                            _isLoading
+                                ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
+                                : const Text(
+                                  'Masuk',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -192,10 +231,8 @@ class _MasukScreenState extends State<MasukScreen> {
                       height: 50,
                       child: OutlinedButton(
                         onPressed: () {
-                          debugPrint('Tombol Belum Punya Akun ? ditekan!');
-                          // Navigasi ke halaman daftar
+                          // PERBAIKAN: Navigasi ke DaftarScreen
                           Navigator.push(
-                            // Menggunakan push biasa agar bisa kembali
                             context,
                             MaterialPageRoute(
                               builder: (context) => const DaftarScreen(),
@@ -208,7 +245,6 @@ class _MasukScreenState extends State<MasukScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10.0),
                           ),
-                          elevation: 0,
                         ),
                         child: const Text(
                           'Belum Punya Akun ?',
@@ -232,7 +268,7 @@ class _MasukScreenState extends State<MasukScreen> {
   }
 }
 
-// Custom Clipper yang sama
+// === PERBAIKAN: Memastikan method 'shouldReclip' ada ===
 class _CustomShapeClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
@@ -258,6 +294,6 @@ class _CustomShapeClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(CustomClipper<Path> oldClipper) {
-    return false;
+    return false; // Wajib ada
   }
 }

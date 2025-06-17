@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'resepku.dart';
-import 'home_page.dart';
+import 'package:dapurame/splash_screen.dart'; // Menggunakan SplashScreen sebagai halaman awal
 
+// Fungsi main diubah menjadi async untuk inisialisasi Firebase
 void main() async {
+  // Pastikan semua widget binding sudah siap sebelum menjalankan kode async
   WidgetsFlutterBinding.ensureInitialized();
 
-  try {
-    print("Initializing Firebase");
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    print("✅ Firebase initialized successfully!");
-  } catch (e) {
-    print("❌ Firebase initialization failed: $e");
-  }
+  // Inisialisasi Firebase dengan konfigurasi platform Anda saat ini
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  // Jalankan aplikasi setelah Firebase siap
   runApp(const MainApp());
 }
 
@@ -28,11 +23,10 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'Poppins', useMaterial3: true),
-      // Start dari Resepku
-      home: const HomePage(),
-      // CRUD Resepku: home: const ResepkuPage(),
-      // Test Firebase: home: const FirebaseTestPage(),
-      // Bookmark page: home: const BookmarkPage(),
+      // Halaman awal aplikasi diatur ke SplashScreen.
+      // Nantinya, SplashScreen yang akan menentukan apakah akan menampilkan
+      // halaman login atau halaman utama (HomePage).
+      home: const SplashScreen(),
     );
   }
 }
