@@ -1,17 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'package:dapurame/splash_screen.dart'; // Menggunakan SplashScreen sebagai halaman awal
+import 'package:dapurame/splash_screen.dart'; 
 
-// Fungsi main diubah menjadi async untuk inisialisasi Firebase
 void main() async {
-  // Pastikan semua widget binding sudah siap sebelum menjalankan kode async
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Inisialisasi Firebase dengan konfigurasi platform Anda saat ini
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  // Jalankan aplikasi setelah Firebase siap
   runApp(const MainApp());
 }
 
