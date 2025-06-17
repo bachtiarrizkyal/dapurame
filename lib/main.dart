@@ -1,21 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
-import 'resepku.dart';
+import 'package:firebase_core/firebase_core.dart'; // <-- 1. Import Firebase Core
+import 'firebase_options.dart'; // <-- 2. Import file konfigurasi Firebase
+import 'package:dapurame/splash_screen.dart'; // Pastikan path ini benar
 
+// 3. Ubah fungsi main menjadi async
 void main() async {
+  // 4. Pastikan semua widget binding sudah siap
   WidgetsFlutterBinding.ensureInitialized();
 
-  try {
-    print("Initializing Firebase");
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    print("✅ Firebase initialized successfully!");
-  } catch (e) {
-    print("❌ Firebase initialization failed: $e");
-  }
+  // 5. Inisialisasi Firebase dengan konfigurasi platform Anda saat ini
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  // Jalankan aplikasi setelah Firebase siap
   runApp(const MainApp());
 }
 
@@ -27,11 +23,8 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'Poppins', useMaterial3: true),
-      // Start dari Resepku
-      home: const ResepkuPage(),
-      // CRUD Resepku: home: const ResepkuPage(),
-      // Test Firebase: home: const FirebaseTestPage(),
-      // Bookmark page: home: const BookmarkPage(),
+      // Halaman awal Anda tetap SplashScreen, ini sudah benar.
+      home: const SplashScreen(),
     );
   }
 }

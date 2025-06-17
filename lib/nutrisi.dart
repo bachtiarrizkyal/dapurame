@@ -398,7 +398,7 @@ class NutrisiCard extends StatelessWidget {
               ),
             ),
             Text(
-              'Energi: ${energi} kkal • Protein: ${protein}g',
+              'Energi: $energi kkal • Protein: ${protein}g',
               style: const TextStyle(fontSize: 10, color: Color(0xFF4A2104)),
             ),
           ],
