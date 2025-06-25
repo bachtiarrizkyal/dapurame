@@ -5,6 +5,7 @@ import 'resepku.dart';
 import 'bookmark.dart';
 import 'nutrisi.dart';
 import 'notification_page.dart';
+import 'detail_resep.dart';
 
 void main() {
   // Mengatur style status bar agar menyatu dengan desain
@@ -15,6 +16,7 @@ void main() {
           Colors.transparent, // Membuat background status bar transparan
       statusBarIconBrightness:
           Brightness.dark, // Membuat ikon (baterai, jam) menjadi hitam
+      systemNavigationBarColor: Colors.white, // Navigation bar tidak berubah
     ),
   );
   runApp(
@@ -27,29 +29,29 @@ void main() {
 }
 
 // [DATA BARU] Untuk item di carousel horizontal
-  final List<Map<String, String>> bannerItems = [
-    {
-      'image': 'assets/images/ramen.jpeg',
-      'tag': 'Resep Terbaru!',
-      'title': 'Ramen Ookamizu',
-    },
-    {
-      'image': 'assets/images/sushi.jpg', // GAMBAR BARU
-      'tag': 'Paling Favorit!',
-      'title': 'Sushi Shinomiya',
-    },
-    {
-      'image': 'assets/images/cake.jpg', // GAMBAR BARU
-      'tag': 'Hidangan Penutup!',
-      'title': 'Cake Berry',
-    },
-  ];
+final List<Map<String, String>> bannerItems = [
+  {
+    'image': 'assets/images/ramen.jpeg',
+    'tag': 'Resep Terbaru!',
+    'title': 'Ramen Ookamizu',
+  },
+  {
+    'image': 'assets/images/sushi.jpg', // GAMBAR BARU
+    'tag': 'Paling Favorit!',
+    'title': 'Sushi Shinomiya',
+  },
+  {
+    'image': 'assets/images/cake.jpg', // GAMBAR BARU
+    'tag': 'Hidangan Penutup!',
+    'title': 'Cake Berry',
+  },
+];
 
 // ubah dari StatelessWidget menjadi StatefulWidget
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
- @override
+  @override
   State<HomePage> createState() => _HomePageState();
 }
 
@@ -57,6 +59,19 @@ class _HomePageState extends State<HomePage> {
   int _currentPageIndex = 0;
   // Controller untuk PageView
   final PageController _pageController = PageController();
+
+  // Tambahkan state untuk bookmark
+  List<Map<String, String>> bookmarkedRecipes = [];
+
+  void _toggleBookmark(Map<String, String> recipe) {
+    setState(() {
+      if (bookmarkedRecipes.any((r) => r['title'] == recipe['title'])) {
+        bookmarkedRecipes.removeWhere((r) => r['title'] == recipe['title']);
+      } else {
+        bookmarkedRecipes.add(recipe);
+      }
+    });
+  }
 
   // Jangan lupa dispose controller saat widget tidak lagi digunakan
   @override
@@ -68,10 +83,10 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFFFAF2), 
+      backgroundColor: Color(0xFFFFFAF2),
       body: SafeArea(
         child: SingleChildScrollView(
-           padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -92,9 +107,11 @@ class _HomePageState extends State<HomePage> {
                       color: Color(0xFF8B4513),
                     ), // Saddle Brown color
                     onPressed: () {
-                       Navigator.push(
+                      Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const NotificationPage()),
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationPage(),
+                        ),
                       );
                     },
                   ),
@@ -169,12 +186,12 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-              
+
               // Memberi jarak antara container atas dan gambar ramen
               SizedBox(height: 24.0),
 
               // Mengganti ListView dengan PageView.builder
-               SizedBox(
+              SizedBox(
                 height: 200.0,
                 child: PageView.builder(
                   controller: _pageController,
@@ -212,17 +229,23 @@ class _HomePageState extends State<HomePage> {
                     height: 8.0,
                     decoration: BoxDecoration(
                       // Warna ditentukan oleh state _currentPageIndex
-                      color: _currentPageIndex == index
-                          ? Color(0xFF8B4513) // Warna aktif
-                          : Color.fromRGBO(230, 139, 43, 0.5), // Warna non-aktif
+                      color:
+                          _currentPageIndex == index
+                              ? Color(0xFF8B4513) // Warna aktif
+                              : Color.fromRGBO(
+                                230,
+                                139,
+                                43,
+                                0.5,
+                              ), // Warna non-aktif
                       shape: BoxShape.circle,
                     ),
                   );
                 }),
               ),
-              
+
               SizedBox(height: 26.0),
-          
+
               Text(
                 'Paling Diminati',
                 style: TextStyle(
@@ -239,7 +262,8 @@ class _HomePageState extends State<HomePage> {
                   crossAxisCount: 2,
                   crossAxisSpacing: 16.0,
                   mainAxisSpacing: 16.0,
-                  childAspectRatio: 0.65, // Adjusted to give more vertical space
+                  childAspectRatio:
+                      0.65, // Adjusted to give more vertical space
                 ),
                 itemCount: 6, // Number of recipe cards
                 itemBuilder: (context, index) {
@@ -316,6 +340,11 @@ class _HomePageState extends State<HomePage> {
                     author: recipe['author']!,
                     time: recipe['time']!,
                     profileImagePath: recipe['profileImagePath']!,
+                    isBookmarked: bookmarkedRecipes.any(
+                      (r) => r['title'] == recipe['title'],
+                    ),
+                    onBookmarkTap: () => _toggleBookmark(recipe),
+                    recipeData: recipe, // Pass the whole recipe map
                   );
                 },
               ),
@@ -363,102 +392,95 @@ class _HomePageState extends State<HomePage> {
 
   // Untuk membuat satu item di carousel
   Widget _buildBannerCard({
-    required String image, 
-    required String tag, 
-    required String title
-    }) {
+    required String image,
+    required String tag,
+    required String title,
+  }) {
     return Container(
       margin: const EdgeInsets.only(right: 16.0),
       decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(10.0),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.3),
-          spreadRadius: 2,
-          blurRadius: 10,
-          offset: Offset(0, 5),
-        )
-      ],
-    ),
-    // Gunakan ClipRRect untuk memastikan semua anak (gambar & gradasi)
-    // ikut terpotong sesuai bentuk rounded corner.
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(10.0),
-      child: Stack(
-        fit: StackFit.expand, // Agar semua anak Stack mengisi ruang
-        children: [
-          // LAPISAN 1: GAMBAR (paling bawah)
-          Image.asset(
-            image,
-            fit: BoxFit.cover,
-          ),
-
-          // LAPISAN 2: GRADASI BAYANGAN (di tengah)
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.transparent,
-                  Colors.black.withOpacity(0.8),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                stops: [0.4, 1.0], // Bayangan baru mulai dari 40% atas
-              ),
-            ),
-          ),
-          // ==========================================================
-
-          // LAPISAN 3: TAG (paling atas)
-          Positioned(
-            top: 10.0,
-            left: 10.0,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-              decoration: BoxDecoration(
-                color: Color(0xFFFFF2DF),
-                borderRadius: BorderRadius.circular(5.0),
-              ),
-              child: Text(
-                tag,
-                style: TextStyle(
-                  color: Color(0xFF8B4513),
-                  fontSize: 12.0,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-          ),
-
-          // LAPISAN 4: JUDUL (paling atas)
-          Positioned(
-            bottom: 10.0,
-            right: 10.0,
-            child: Text(
-              title,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20.0,
-                fontWeight: FontWeight.bold,
-                // Shadow pada teks bisa dipertahankan atau dihapus
-                // karena sudah dibantu oleh gradasi background.
-                shadows: [
-                  Shadow(
-                    blurRadius: 10.0,
-                    color: Colors.black.withOpacity(0.7),
-                    offset: Offset(2.0, 2.0),
-                  )
-                ],
-              ),
-            ),
+        borderRadius: BorderRadius.circular(10.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            spreadRadius: 2,
+            blurRadius: 10,
+            offset: Offset(0, 5),
           ),
         ],
       ),
-    ),
-  );
-}
+      // Gunakan ClipRRect untuk memastikan semua anak (gambar & gradasi)
+      // ikut terpotong sesuai bentuk rounded corner.
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10.0),
+        child: Stack(
+          fit: StackFit.expand, // Agar semua anak Stack mengisi ruang
+          children: [
+            // LAPISAN 1: GAMBAR (paling bawah)
+            Image.asset(image, fit: BoxFit.cover),
 
- 
+            // LAPISAN 2: GRADASI BAYANGAN (di tengah)
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: [0.4, 1.0], // Bayangan baru mulai dari 40% atas
+                ),
+              ),
+            ),
+            // ==========================================================
+
+            // LAPISAN 3: TAG (paling atas)
+            Positioned(
+              top: 10.0,
+              left: 10.0,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                decoration: BoxDecoration(
+                  color: Color(0xFFFFF2DF),
+                  borderRadius: BorderRadius.circular(5.0),
+                ),
+                child: Text(
+                  tag,
+                  style: TextStyle(
+                    color: Color(0xFF8B4513),
+                    fontSize: 12.0,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+
+            // LAPISAN 4: JUDUL (paling atas)
+            Positioned(
+              bottom: 10.0,
+              right: 10.0,
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20.0,
+                  fontWeight: FontWeight.bold,
+                  // Shadow pada teks bisa dipertahankan atau dihapus
+                  // karena sudah dibantu oleh gradasi background.
+                  shadows: [
+                    Shadow(
+                      blurRadius: 10.0,
+                      color: Colors.black.withOpacity(0.7),
+                      offset: Offset(2.0, 2.0),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildRecipeCard({
     required String imagePath,
     required String rating,
@@ -467,150 +489,170 @@ class _HomePageState extends State<HomePage> {
     required String author,
     required String time,
     required String profileImagePath,
+    required bool isBookmarked,
+    required VoidCallback onBookmarkTap,
+    required Map<String, String> recipeData,
   }) {
-    return Container(
-      width: 180,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: Offset(0, 3),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DetailResepPage(recipe: recipeData),
           ),
-        ],
-      ),
+        );
+      },
+      child: Container(
+        width: 180,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10.0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              spreadRadius: 2,
+              blurRadius: 5,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
 
-      // Langsung ke kontennya
-      child: Column(
-        mainAxisSize:
-            MainAxisSize.min, // Membuat tinggi kartu pas dengan kontennya
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Bagian Gambar (Tidak berubah)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 0),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    spreadRadius: 1,
-                    blurRadius: 8,
-                    offset: Offset(0, 4),
+        // Langsung ke kontennya
+        child: Column(
+          mainAxisSize:
+              MainAxisSize.min, // Membuat tinggi kartu pas dengan kontennya
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Bagian Gambar (Tidak berubah)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 0),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      spreadRadius: 1,
+                      blurRadius: 8,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10.0),
+                  child: Image.asset(
+                    imagePath,
+                    height: 90.0,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+
+            // Konten Teks
+            Padding(
+              padding: const EdgeInsets.all(
+                12.0,
+              ), // Beri padding seragam di sekeliling konten teks
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.star,
+                            color: Color(0xFF662B0E),
+                            size: 14.0,
+                          ),
+                          SizedBox(width: 3.0),
+                          Text(
+                            rating,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF662B0E),
+                              fontSize: 13.0,
+                            ),
+                          ),
+                        ],
+                      ),
+                      GestureDetector(
+                        onTap: onBookmarkTap,
+                        child: Icon(
+                          isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                          color: Color(0xFF662B0E),
+                          size: 18.0,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8.0),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14.0,
+                      color: Color(0xFF662B0E),
+                    ),
+                  ),
+                  SizedBox(height: 4.0),
+                  Text(
+                    description,
+                    style: TextStyle(fontSize: 10.0, color: Color(0xFF662B0E)),
+                    textAlign: TextAlign.justify,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+
+                  // Ganti Spacer() kembali menjadi SizedBox untuk jarak yang pasti
+                  SizedBox(height: 14.0),
+
+                  // Baris Avatar dan Waktu
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 9.0,
+                        backgroundImage: AssetImage(profileImagePath),
+                      ),
+                      SizedBox(width: 4.0),
+                      Text(
+                        author,
+                        style: TextStyle(
+                          fontSize: 10.0,
+                          color: Color(0xFF662B0E),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Spacer(),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6.0,
+                          vertical: 3.0,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Color.fromRGBO(250, 228, 194, 1),
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        child: Text(
+                          time,
+                          style: TextStyle(
+                            color: Color(0xFF662B0E),
+                            fontSize: 8.0,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10.0),
-                child: Image.asset(
-                  imagePath,
-                  height: 90.0,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
             ),
-          ),
-
-          // Konten Teks
-          Padding(
-            padding: const EdgeInsets.all(
-              12.0,
-            ), // Beri padding seragam di sekeliling konten teks
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.star, color: Color(0xFF662B0E), size: 14.0),
-                        SizedBox(width: 3.0),
-                        Text(
-                          rating,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF662B0E),
-                            fontSize: 13.0,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Icon(
-                      Icons.bookmark_border,
-                      color: Color(0xFF662B0E),
-                      size: 18.0,
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.0),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14.0,
-                    color: Color(0xFF662B0E),
-                  ),
-                ),
-                SizedBox(height: 4.0),
-                Text(
-                  description,
-                  style: TextStyle(fontSize: 10.0, color: Color(0xFF662B0E)),
-                  textAlign: TextAlign.justify,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-
-                // Ganti Spacer() kembali menjadi SizedBox untuk jarak yang pasti
-                SizedBox(height: 14.0,),
-                
-                // Baris Avatar dan Waktu
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 9.0,
-                      backgroundImage: AssetImage(profileImagePath),
-                    ),
-                    SizedBox(width: 4.0),
-                    Text(
-                      author,
-                      style: TextStyle(
-                        fontSize: 10.0,
-                        color: Color(0xFF662B0E),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Spacer(),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 6.0,
-                        vertical: 3.0,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Color.fromRGBO(250, 228, 194, 1),
-                        borderRadius: BorderRadius.circular(5.0),
-                      ),
-                      child: Text(
-                        time,
-                        style: TextStyle(
-                          color: Color(0xFF662B0E),
-                          fontSize: 8.0,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
