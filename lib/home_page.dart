@@ -157,9 +157,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-
               SizedBox(height: 24.0),
-
               SizedBox(
                 height: 200.0,
                 child: PageView.builder(
@@ -183,7 +181,6 @@ class _HomePageState extends State<HomePage> {
                   },
                 ),
               ),
-
               SizedBox(height: 18.0),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -193,20 +190,17 @@ class _HomePageState extends State<HomePage> {
                     width: 8.0,
                     height: 8.0,
                     decoration: BoxDecoration(
-                      color:
-                          _currentPageIndex == index
-                              ? Color(0xFF8B4513)
-                              : Color.fromRGBO(230, 139, 43, 0.5),
+                      color: _currentPageIndex == index
+                          ? Color(0xFF8B4513)
+                          : Color.fromRGBO(230, 139, 43, 0.5),
                       shape: BoxShape.circle,
                     ),
                   );
                 }),
               ),
-
               SizedBox(height: 26.0),
-
               Text(
-                'Paling Diminati',
+                'Resep Untuk Kamu',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
@@ -215,14 +209,10 @@ class _HomePageState extends State<HomePage> {
               ),
               SizedBox(height: 16.0),
               StreamBuilder<QuerySnapshot>(
-                stream:
-                    FirebaseFirestore.instance
-                        .collection('resep')
-                        .where(
-                          'is_shared',
-                          isEqualTo: true,
-                        ) // Pastikan field 'is_shared' sesuai dengan yang Anda gunakan untuk filter
-                        .snapshots(),
+                stream: FirebaseFirestore.instance
+                    .collection('resep')
+                    .where('is_shared', isEqualTo: true)
+                    .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
@@ -252,56 +242,53 @@ class _HomePageState extends State<HomePage> {
                     ),
                     itemCount: recipes.length,
                     itemBuilder: (context, index) {
-                      final recipeDoc =
-                          recipes[index]; // Ini adalah DocumentSnapshot
-                      final recipeData =
-                          recipeDoc.data() as Map<String, dynamic>;
-                      final String documentId =
-                          recipeDoc.id; // Ambil ID dokumen
+                      final recipeDoc = recipes[index];
+                      final recipeData = recipeDoc.data() as Map<String, dynamic>;
+                      final String documentId = recipeDoc.id;
 
-                      final String nama =
-                          recipeData['nama'] ?? 'Nama Resep Tidak Tersedia';
-                      final String deskripsi =
-                          recipeData['deskripsi'] ?? 'Deskripsi tidak tersedia';
-                      final String rating =
-                          (recipeData['rating'] is num)
-                              ? recipeData['rating'].toString()
-                              : 'N/A';
-                      final String waktuMasak =
-                          recipeData['waktu_masak'] ?? 'N/A';
-                      final String imageUrl =
-                          recipeData['image_url'] ??
-                          'assets/images/default.png';
+                      final String nama = recipeData['nama'] ?? 'Nama Resep Tidak Tersedia';
+                      final String deskripsi = recipeData['deskripsi'] ?? 'Deskripsi tidak tersedia';
+                      final String rating = (recipeData['rating'] is num) ? recipeData['rating'].toString() : 'N/A';
+                      final String waktuMasak = recipeData['waktu_masak'] ?? 'N/A';
+                      final String imageUrl = recipeData['image_url'] ?? 'assets/images/default.png';
+                      final String userUid = recipeData['user_id'] ?? '';
 
-                      final String author =
-                          recipeData['author'] ?? 'Penulis Anonim';
-                      final String profileImagePath =
-                          recipeData['profile_image_path'] ??
-                          'assets/images/profilemale.jpeg';
+                      return FutureBuilder<DocumentSnapshot>(
+                        future: FirebaseFirestore.instance.collection('users').doc(userUid).get(),
+                        builder: (context, userSnapshot) {
+                          String authorName = 'Anonim';
+                          String profilePicturePath = 'assets/images/profilemale.jpeg'; 
 
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => DetailResepPage(
-                                    documentId:
-                                        documentId, // <--- KIRIM DOCUMENT ID SAJA
+                          if (userSnapshot.connectionState == ConnectionState.done && userSnapshot.hasData && userSnapshot.data!.exists) {
+                            final Map<String, dynamic> userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                            authorName = userData['nama'] ?? 'Anonim'; 
+                            profilePicturePath = userData['profile_image_url'] ?? 'assets/images/profilemale.jpeg';
+                          }
+
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => DetailResepPage(
+                                    documentId: documentId,
                                   ),
+                                ),
+                              );
+                            },
+                            child: _buildRecipeCard(
+                              imagePath: imageUrl,
+                              rating: rating,
+                              title: nama,
+                              description: deskripsi,
+                              author: authorName, 
+                              time: waktuMasak,
+                              profileImagePath: profilePicturePath,
                             ),
                           );
                         },
-                        child: _buildRecipeCard(
-                          imagePath: imageUrl,
-                          rating: rating,
-                          title: nama,
-                          description: deskripsi,
-                          author: author,
-                          time: waktuMasak,
-                          profileImagePath: profileImagePath,
-                        ),
                       );
+                      
                     },
                   );
                 },
@@ -313,34 +300,28 @@ class _HomePageState extends State<HomePage> {
       bottomNavigationBar: CustomNavbar(
         currentIndex: 0,
         onTap: (index) {
-          // Navigate to different pages
           switch (index) {
             case 0:
-              // Home - already here
               break;
             case 1:
-              // Nutrisi
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const NutrisiPage()),
               );
               break;
             case 2:
-              // Resepku
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const ResepkuPage()),
               );
               break;
             case 3:
-              // Bookmark
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const BookmarkPage()),
               );
               break;
             case 4:
-              // Profil - belum ada halaman, skip
               break;
           }
         },
@@ -371,10 +352,7 @@ class _HomePageState extends State<HomePage> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // LAPISAN 1: GAMBAR (paling bawah)
             Image.asset(image, fit: BoxFit.cover),
-
-            // LAPISAN 2: GRADASI BAYANGAN (di tengah)
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -385,8 +363,6 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-
-            // LAPISAN 3: TAG (paling atas)
             Positioned(
               top: 10.0,
               left: 10.0,
@@ -406,8 +382,6 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-
-            // LAPISAN 4: JUDUL (paling atas)
             Positioned(
               bottom: 10.0,
               right: 10.0,
@@ -442,6 +416,9 @@ class _HomePageState extends State<HomePage> {
     required String time,
     required String profileImagePath,
   }) {
+    final bool isNetworkImage = imagePath.startsWith('http');
+    final bool isLocalFileImage = imagePath.startsWith('/data/user/') || imagePath.startsWith('/storage/emulated/') || imagePath.startsWith('file:///');
+
     return Container(
       width: 180,
       decoration: BoxDecoration(
@@ -456,7 +433,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -477,67 +453,56 @@ class _HomePageState extends State<HomePage> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10.0),
-                child:
-                    imagePath.startsWith('http')
-                        ? Image.network(
-                          imagePath,
-                          height: 90.0,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            print(
-                              "Error loading network image: $imagePath, Error: $error",
-                            );
-                            return Image.asset(
-                              'assets/images/default.png',
-                              height: 90.0,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                            );
-                          },
-                        )
-                        : imagePath.startsWith('/data/user/') ||
-                            imagePath.startsWith('/storage/emulated/') ||
-                            imagePath.startsWith('file:///')
+                child: isNetworkImage
+                    ? Image.network(
+                        imagePath,
+                        height: 90.0,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          print("Error loading network image: $imagePath, Error: $error");
+                          return Image.asset(
+                            'assets/images/default.png',
+                            height: 90.0,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          );
+                        },
+                      )
+                    : isLocalFileImage
                         ? Image.file(
-                          File(imagePath),
-                          height: 90.0,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            print(
-                              "Error loading local file image: $imagePath, Error: $error",
-                            );
-                            return Image.asset(
-                              'assets/images/default.png',
-                              height: 90.0,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                            );
-                          },
-                        )
+                            File(imagePath),
+                            height: 90.0,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              print("Error loading local file image: $imagePath, Error: $error");
+                              return Image.asset(
+                                'assets/images/default.png',
+                                height: 90.0,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              );
+                            },
+                          )
                         : Image.asset(
-                          imagePath,
-                          height: 90.0,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            print(
-                              "Error loading asset image: $imagePath, Error: $error",
-                            );
-                            return Image.asset(
-                              'assets/images/default.png',
-                              height: 90.0,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                            );
-                          },
-                        ),
+                            imagePath,
+                            height: 90.0,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              print("Error loading asset image: $imagePath, Error: $error");
+                              return Image.asset(
+                                'assets/images/default.png',
+                                height: 90.0,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              );
+                            },
+                          ),
               ),
             ),
           ),
-
-          // Konten Teks
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: Column(
@@ -577,22 +542,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 SizedBox(height: 4.0),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 6.0, vertical: 3.0),
-                  decoration: BoxDecoration(
-                    color: Color.fromRGBO(250, 228, 194, 1),
-                    borderRadius: BorderRadius.circular(5.0),
-                  ),
-                  child: Text(
-                    time,
-                    style: TextStyle(
-                      color: Color(0xFF662B0E),
-                      fontSize: 8.0,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                SizedBox(height: 4.0),
                 Text(
                   description,
                   style: TextStyle(fontSize: 10.0, color: Color(0xFF662B0E)),
@@ -605,7 +554,9 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     CircleAvatar(
                       radius: 9.0,
-                      backgroundImage: AssetImage(profileImagePath),
+                      backgroundImage: profileImagePath.startsWith('http')
+                          ? NetworkImage(profileImagePath) as ImageProvider
+                          : AssetImage(profileImagePath),
                     ),
                     SizedBox(width: 4.0),
                     Text(
@@ -614,6 +565,25 @@ class _HomePageState extends State<HomePage> {
                         fontSize: 10.0,
                         color: Color(0xFF662B0E),
                         fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Spacer(),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 6.0,
+                        vertical: 3.0,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Color.fromRGBO(250, 228, 194, 1),
+                        borderRadius: BorderRadius.circular(5.0),
+                      ),
+                      child: Text(
+                        time,
+                        style: TextStyle(
+                          color: Color(0xFF662B0E),
+                          fontSize: 8.0,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],
