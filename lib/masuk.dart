@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:dapurame/daftar.dart'; 
 import 'package:dapurame/bookmark.dart';
 import 'package:dapurame/home_page.dart';
+import 'package:dapurame/resepku.dart';
 
 class MasukScreen extends StatefulWidget {
   const MasukScreen({super.key});
@@ -47,7 +48,7 @@ class _MasukScreenState extends State<MasukScreen> {
         if (userCredential.user!.emailVerified) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const HomePage()),
+            MaterialPageRoute(builder: (context) => const ResepkuPage()),
           );
         } else {
           await _auth.signOut();
