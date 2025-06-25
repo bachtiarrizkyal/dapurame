@@ -16,6 +16,7 @@ void main() {
           Colors.transparent, // Membuat background status bar transparan
       statusBarIconBrightness:
           Brightness.dark, // Membuat ikon (baterai, jam) menjadi hitam
+      systemNavigationBarColor: Colors.white, // Navigation bar tidak berubah
     ),
   );
   runApp(
@@ -73,11 +74,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Jangan lupa dispose controller saat widget tidak lagi digunakan
-  // @override
-  // void dispose() {
-  //   _pageController.dispose();
-  //   super.dispose();
-  // }
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
