@@ -5,6 +5,7 @@ import 'resepku.dart';
 import 'bookmark.dart';
 import 'nutrisi.dart';
 import 'notification_page.dart';
+import 'detail_resep.dart';
 
 void main() {
   // Mengatur style status bar agar menyatu dengan desain
@@ -25,8 +26,6 @@ void main() {
     ),
   );
 }
-
-
 
 // [DATA BARU] Untuk item di carousel horizontal
 final List<Map<String, String>> bannerItems = [
@@ -74,11 +73,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Jangan lupa dispose controller saat widget tidak lagi digunakan
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
+  // @override
+  // void dispose() {
+  //   _pageController.dispose();
+  //   super.dispose();
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -340,9 +339,11 @@ class _HomePageState extends State<HomePage> {
                     author: recipe['author']!,
                     time: recipe['time']!,
                     profileImagePath: recipe['profileImagePath']!,
-                    isBookmarked: bookmarkedRecipes.any((r) => r['title'] == recipe['title'],
+                    isBookmarked: bookmarkedRecipes.any(
+                      (r) => r['title'] == recipe['title'],
                     ),
                     onBookmarkTap: () => _toggleBookmark(recipe),
+                    recipeData: recipe, // Pass the whole recipe map
                   );
                 },
               ),
@@ -489,153 +490,168 @@ class _HomePageState extends State<HomePage> {
     required String profileImagePath,
     required bool isBookmarked,
     required VoidCallback onBookmarkTap,
+    required Map<String, String> recipeData,
   }) {
-    return Container(
-      width: 180,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: Offset(0, 3),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DetailResepPage(recipe: recipeData),
           ),
-        ],
-      ),
+        );
+      },
+      child: Container(
+        width: 180,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10.0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              spreadRadius: 2,
+              blurRadius: 5,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
 
-      // Langsung ke kontennya
-      child: Column(
-        mainAxisSize:
-            MainAxisSize.min, // Membuat tinggi kartu pas dengan kontennya
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Bagian Gambar (Tidak berubah)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 0),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    spreadRadius: 1,
-                    blurRadius: 8,
-                    offset: Offset(0, 4),
+        // Langsung ke kontennya
+        child: Column(
+          mainAxisSize:
+              MainAxisSize.min, // Membuat tinggi kartu pas dengan kontennya
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Bagian Gambar (Tidak berubah)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 0),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      spreadRadius: 1,
+                      blurRadius: 8,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10.0),
+                  child: Image.asset(
+                    imagePath,
+                    height: 90.0,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+
+            // Konten Teks
+            Padding(
+              padding: const EdgeInsets.all(
+                12.0,
+              ), // Beri padding seragam di sekeliling konten teks
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.star,
+                            color: Color(0xFF662B0E),
+                            size: 14.0,
+                          ),
+                          SizedBox(width: 3.0),
+                          Text(
+                            rating,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF662B0E),
+                              fontSize: 13.0,
+                            ),
+                          ),
+                        ],
+                      ),
+                      GestureDetector(
+                        onTap: onBookmarkTap,
+                        child: Icon(
+                          isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                          color: Color(0xFF662B0E),
+                          size: 18.0,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8.0),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14.0,
+                      color: Color(0xFF662B0E),
+                    ),
+                  ),
+                  SizedBox(height: 4.0),
+                  Text(
+                    description,
+                    style: TextStyle(fontSize: 10.0, color: Color(0xFF662B0E)),
+                    textAlign: TextAlign.justify,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+
+                  // Ganti Spacer() kembali menjadi SizedBox untuk jarak yang pasti
+                  SizedBox(height: 14.0),
+
+                  // Baris Avatar dan Waktu
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 9.0,
+                        backgroundImage: AssetImage(profileImagePath),
+                      ),
+                      SizedBox(width: 4.0),
+                      Text(
+                        author,
+                        style: TextStyle(
+                          fontSize: 10.0,
+                          color: Color(0xFF662B0E),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Spacer(),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6.0,
+                          vertical: 3.0,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Color.fromRGBO(250, 228, 194, 1),
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        child: Text(
+                          time,
+                          style: TextStyle(
+                            color: Color(0xFF662B0E),
+                            fontSize: 8.0,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10.0),
-                child: Image.asset(
-                  imagePath,
-                  height: 90.0,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
             ),
-          ),
-
-          // Konten Teks
-          Padding(
-            padding: const EdgeInsets.all(
-              12.0,
-            ), // Beri padding seragam di sekeliling konten teks
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.star, color: Color(0xFF662B0E), size: 14.0),
-                        SizedBox(width: 3.0),
-                        Text(
-                          rating,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF662B0E),
-                            fontSize: 13.0,
-                          ),
-                        ),
-                      ],
-                    ),
-                    GestureDetector(
-                      onTap: onBookmarkTap,
-                      child: Icon(
-                        isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                        color: Color(0xFF662B0E),
-                        size: 18.0,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.0),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14.0,
-                    color: Color(0xFF662B0E),
-                  ),
-                ),
-                SizedBox(height: 4.0),
-                Text(
-                  description,
-                  style: TextStyle(fontSize: 10.0, color: Color(0xFF662B0E)),
-                  textAlign: TextAlign.justify,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-
-                // Ganti Spacer() kembali menjadi SizedBox untuk jarak yang pasti
-                SizedBox(height: 14.0),
-
-                // Baris Avatar dan Waktu
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 9.0,
-                      backgroundImage: AssetImage(profileImagePath),
-                    ),
-                    SizedBox(width: 4.0),
-                    Text(
-                      author,
-                      style: TextStyle(
-                        fontSize: 10.0,
-                        color: Color(0xFF662B0E),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Spacer(),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 6.0,
-                        vertical: 3.0,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Color.fromRGBO(250, 228, 194, 1),
-                        borderRadius: BorderRadius.circular(5.0),
-                      ),
-                      child: Text(
-                        time,
-                        style: TextStyle(
-                          color: Color(0xFF662B0E),
-                          fontSize: 8.0,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
