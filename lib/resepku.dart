@@ -18,8 +18,7 @@ class ResepkuPage extends StatefulWidget {
 
 class _ResepkuPageState extends State<ResepkuPage> {
   User? _currentUser; // Deklarasikan variabel untuk menyimpan user
-  final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance; // Instance Firestore
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   void initState() {
