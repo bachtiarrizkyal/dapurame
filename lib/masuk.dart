@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:dapurame/daftar.dart'; // Import ini akan digunakan oleh tombol navigasi
+import 'package:dapurame/daftar.dart'; 
 import 'package:dapurame/bookmark.dart';
+import 'package:dapurame/home_page.dart';
 
 class MasukScreen extends StatefulWidget {
   const MasukScreen({super.key});
@@ -46,7 +47,7 @@ class _MasukScreenState extends State<MasukScreen> {
         if (userCredential.user!.emailVerified) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const BookmarkPage()),
+            MaterialPageRoute(builder: (context) => const HomePage()),
           );
         } else {
           await _auth.signOut();
