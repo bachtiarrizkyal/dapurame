@@ -2,16 +2,117 @@ import 'dart:io';
 import 'package:dapurame/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Import ini
 import 'navbar.dart';
 import 'tambah_resep.dart';
 import 'nutrisi.dart';
 import 'bookmark.dart';
 
-class ResepkuPage extends StatelessWidget {
+class ResepkuPage extends StatefulWidget {
+  // Ubah menjadi StatefulWidget
   const ResepkuPage({super.key});
 
   @override
+  State<ResepkuPage> createState() => _ResepkuPageState();
+}
+
+class _ResepkuPageState extends State<ResepkuPage> {
+  User? _currentUser; // Deklarasikan variabel untuk menyimpan user
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUser = FirebaseAuth.instance.currentUser; // Dapatkan user saat ini
+    // Anda bisa menambahkan listener jika ingin mendeteksi perubahan status autentikasi
+    // FirebaseAuth.instance.authStateChanges().listen((User? user) {
+    //   if (mounted) {
+    //     setState(() {
+    //       _currentUser = user;
+    //     });
+    //   }
+    // });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Tampilkan pesan jika pengguna belum login
+    if (_currentUser == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFFFFAF2),
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: AppBar(
+            backgroundColor: const Color(0xFF662B0E),
+            centerTitle: true,
+            elevation: 0,
+            title: const Text(
+              'Resepku',
+              style: TextStyle(
+                fontSize: 26,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.person_off, size: 80, color: Color(0xFFB7B7B7)),
+              SizedBox(height: 16),
+              Text(
+                'Anda harus login untuk melihat resep Anda.',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Color(0xFF4A2104),
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Silakan masuk untuk mengelola resep pribadi Anda.',
+                style: TextStyle(fontSize: 14, color: Color(0xFFB7B7B7)),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: CustomNavbar(
+          currentIndex: 2,
+          onTap: (index) {
+            switch (index) {
+              case 0:
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const HomePage()),
+                );
+                break;
+              case 1:
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const NutrisiPage()),
+                );
+                break;
+              case 2:
+                // Resepku - already here
+                break;
+              case 3:
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const BookmarkPage()),
+                );
+                break;
+              // case 4: Profil - belum ada halaman, skip
+            }
+          },
+        ),
+      );
+    }
+
+    // Tampilkan UI resep jika pengguna sudah login
     return Scaffold(
       backgroundColor: const Color(0xFFFFFAF2),
       appBar: PreferredSize(
@@ -55,14 +156,17 @@ class ResepkuPage extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Resep List
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('resep')
-                  .orderBy('created_at', descending: true)
-                  .snapshots(),
+              // Filter query Firestore berdasarkan user_id
+              stream:
+                  _firestore
+                      .collection('resep')
+                      .where('user_id', isEqualTo: _currentUser!.uid)
+                      .orderBy('created_at', descending: true)
+                      .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Center(
@@ -75,9 +179,7 @@ class ResepkuPage extends StatelessWidget {
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
-                    child: CircularProgressIndicator(
-                      color: Color(0xFFE68B2B),
-                    ),
+                    child: CircularProgressIndicator(color: Color(0xFFE68B2B)),
                   );
                 }
 
@@ -93,7 +195,7 @@ class ResepkuPage extends StatelessWidget {
                         ),
                         SizedBox(height: 16),
                         Text(
-                          'Belum ada resep',
+                          'Belum ada resep yang Anda buat',
                           style: TextStyle(
                             fontSize: 18,
                             color: Color(0xFF4A2104),
@@ -118,7 +220,8 @@ class ResepkuPage extends StatelessWidget {
                   itemCount: snapshot.data!.docs.length,
                   itemBuilder: (context, index) {
                     DocumentSnapshot document = snapshot.data!.docs[index];
-                    Map<String, dynamic> data = document.data()! as Map<String, dynamic>;
+                    Map<String, dynamic> data =
+                        document.data()! as Map<String, dynamic>;
 
                     return ResepCard(
                       documentId: document.id,
@@ -140,32 +243,23 @@ class ResepkuPage extends StatelessWidget {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const TambahResepPage(),
-            ),
+            MaterialPageRoute(builder: (context) => const TambahResepPage()),
           );
         },
         backgroundColor: const Color(0xFF662B0E),
-        child: const Icon(
-          Icons.add,
-          color: Colors.white,
-          size: 32,
-        ),
+        child: const Icon(Icons.add, color: Colors.white, size: 32),
       ),
       bottomNavigationBar: CustomNavbar(
-        currentIndex: 2, 
+        currentIndex: 2,
         onTap: (index) {
-          // Navigate to different pages
           switch (index) {
             case 0:
-              // Home
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const HomePage()),
               );
               break;
             case 1:
-              // Nutrisi
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const NutrisiPage()),
@@ -175,15 +269,12 @@ class ResepkuPage extends StatelessWidget {
               // Resepku - already here
               break;
             case 3:
-              // Bookmark
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const BookmarkPage()),
               );
               break;
-            case 4:
-              // Profil - belum ada halaman, skip
-              break;
+            // case 4: Profil - belum ada halaman, skip
           }
         },
       ),
@@ -220,80 +311,82 @@ class ResepCard extends StatelessWidget {
       child: ListTile(
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: imagePath.startsWith('http')
-              ? Image.network(
-                  imagePath,
-                  width: 75,
-                  height: 68,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 75,
-                      height: 68,
-                      color: Colors.grey[300],
-                      child: const Icon(
-                        Icons.restaurant,
-                        color: Colors.grey,
-                        size: 30,
-                      ),
-                    );
-                  },
-                )
-              : (imagePath.startsWith('/') && File(imagePath).existsSync())
-                  ? Image.file(
-                      File(imagePath),
-                      width: 75,
-                      height: 68,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 75,
-                          height: 68,
-                          color: Colors.grey[300],
-                          child: const Icon(
-                            Icons.restaurant,
-                            color: Colors.grey,
-                            size: 30,
-                          ),
-                        );
-                      },
-                    )
-                  : (imagePath != 'default_placeholder' && imagePath.startsWith('assets/'))
-                      ? Image.asset(
-                          imagePath,
-                          width: 75,
-                          height: 68,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              width: 75,
-                              height: 68,
-                              color: Colors.grey[300],
-                              child: const Icon(
-                                Icons.restaurant,
-                                color: Colors.grey,
-                                size: 30,
-                              ),
-                            );
-                          },
-                        )
-                      : Container(
-                          width: 75,
-                          height: 68,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE68B2B).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: const Color(0xFFE68B2B),
-                              width: 1,
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.restaurant,
-                            color: Color(0xFFE68B2B),
-                            size: 30,
-                          ),
+          child:
+              imagePath.startsWith('http')
+                  ? Image.network(
+                    imagePath,
+                    width: 75,
+                    height: 68,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 75,
+                        height: 68,
+                        color: Colors.grey[300],
+                        child: const Icon(
+                          Icons.restaurant,
+                          color: Colors.grey,
+                          size: 30,
                         ),
+                      );
+                    },
+                  )
+                  : (imagePath.startsWith('/') && File(imagePath).existsSync())
+                  ? Image.file(
+                    File(imagePath),
+                    width: 75,
+                    height: 68,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 75,
+                        height: 68,
+                        color: Colors.grey[300],
+                        child: const Icon(
+                          Icons.restaurant,
+                          color: Colors.grey,
+                          size: 30,
+                        ),
+                      );
+                    },
+                  )
+                  : (imagePath != 'default_placeholder' &&
+                      imagePath.startsWith('assets/'))
+                  ? Image.asset(
+                    imagePath,
+                    width: 75,
+                    height: 68,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 75,
+                        height: 68,
+                        color: Colors.grey[300],
+                        child: const Icon(
+                          Icons.restaurant,
+                          color: Colors.grey,
+                          size: 30,
+                        ),
+                      );
+                    },
+                  )
+                  : Container(
+                    width: 75,
+                    height: 68,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE68B2B).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFFE68B2B),
+                        width: 1,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.restaurant,
+                      color: Color(0xFFE68B2B),
+                      size: 30,
+                    ),
+                  ),
         ),
         title: Text(
           nama,
@@ -319,11 +412,7 @@ class ResepCard extends StatelessWidget {
             const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(
-                  Icons.timer,
-                  size: 14,
-                  color: Color(0xFFE68B2B),
-                ),
+                const Icon(Icons.timer, size: 14, color: Color(0xFFE68B2B)),
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
@@ -362,10 +451,11 @@ class ResepCard extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => TambahResepPage(
-                        documentId: documentId,
-                        initialData: data,
-                      ),
+                      builder:
+                          (context) => TambahResepPage(
+                            documentId: documentId,
+                            initialData: data,
+                          ),
                     ),
                   );
                 },
@@ -385,11 +475,7 @@ class ResepCard extends StatelessWidget {
                 },
                 child: Container(
                   padding: const EdgeInsets.all(6),
-                  child: const Icon(
-                    Icons.delete,
-                    color: Colors.red,
-                    size: 16,
-                  ),
+                  child: const Icon(Icons.delete, color: Colors.red, size: 16),
                 ),
               ),
             ],
@@ -416,17 +502,10 @@ class ResepCard extends StatelessWidget {
                   alignment: Alignment.topRight,
                   child: GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
-                    child: const Icon(
-                      Icons.close,
-                      color: Color(0xFF4A2104),
-                    ),
+                    child: const Icon(Icons.close, color: Color(0xFF4A2104)),
                   ),
                 ),
-                const Icon(
-                  Icons.delete,
-                  size: 120,
-                  color: Color(0xFFE68B2B),
-                ),
+                const Icon(Icons.delete, size: 120, color: Color(0xFFE68B2B)),
                 const SizedBox(height: 12),
                 Text(
                   'Kamu yakin akan menghapus\nresep "$nama"?',
@@ -480,7 +559,7 @@ class ResepCard extends StatelessWidget {
                               .collection('resep')
                               .doc(documentId)
                               .delete();
-                          
+
                           Navigator.of(context).pop();
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
