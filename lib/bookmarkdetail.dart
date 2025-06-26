@@ -1,19 +1,261 @@
+// lib/bookmarkdetail.dart
+
 import 'package:flutter/material.dart';
-import 'bookmark.dart';
+import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io';
 
-class BookmarkDetailPage extends StatelessWidget {
-  final String imagePath;
-  final String title;
+class BookmarkDetailPage extends StatefulWidget {
+  final String bookmarkDocumentId; // ID dokumen di koleksi 'bookmark'
 
-  const BookmarkDetailPage({
-    super.key,
-    required this.imagePath,
-    required this.title,
-  });
+  const BookmarkDetailPage({Key? key, required this.bookmarkDocumentId})
+    : super(key: key);
+
+  @override
+  State<BookmarkDetailPage> createState() => _BookmarkDetailPageState();
+}
+
+class _BookmarkDetailPageState extends State<BookmarkDetailPage> {
+  final TextEditingController _catatanController = TextEditingController();
+
+  // State hanya untuk melacak mode edit Catatan
+  bool _isEditingCatatan = false;
+
+  Map<String, dynamic>? _bookmarkData; // Data dari Firestore
+  User? _currentUser;
+  bool _isLoading = true; // State untuk loading awal
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUser = FirebaseAuth.instance.currentUser;
+    _fetchBookmarkData();
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _catatanController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchBookmarkData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      DocumentSnapshot doc =
+          await FirebaseFirestore.instance
+              .collection('bookmark')
+              .doc(widget.bookmarkDocumentId)
+              .get();
+
+      if (doc.exists && mounted) {
+        setState(() {
+          _bookmarkData = doc.data() as Map<String, dynamic>;
+          _catatanController.text = _bookmarkData!['catatan'] ?? '';
+          _isLoading = false;
+        });
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bookmark tidak ditemukan.')),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memuat detail bookmark: $e')),
+        );
+        Navigator.pop(context);
+      }
+    }
+  }
+
+  // Fungsi ini sekarang hanya akan digunakan untuk memperbarui catatan
+  Future<void> _updateCatatan() async {
+    if (_currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Anda harus login untuk mengedit catatan.'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('bookmark')
+          .doc(widget.bookmarkDocumentId)
+          .update({
+            'catatan': _catatanController.text.trim(),
+            'updated_at': FieldValue.serverTimestamp(),
+          });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Catatan berhasil diperbarui!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        await _fetchBookmarkData(); // Refresh data setelah update
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memperbarui catatan: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  String _formatTimestamp(Timestamp? timestamp) {
+    if (timestamp == null) return 'N/A';
+    DateTime date = timestamp.toDate();
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  // Widget untuk judul section yang tidak bisa diedit
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontWeight: FontWeight.w600,
+        fontSize: 18,
+        color: Color(0xFF662B0E),
+      ),
+    );
+  }
+
+  // Widget untuk judul section yang BISA diedit
+  Widget _buildEditableSectionTitle(
+    String title,
+    bool isEditing,
+    VoidCallback onEditTap,
+    VoidCallback onSaveTap,
+    VoidCallback onCancelTap,
+  ) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+            color: Color(0xFF662B0E),
+          ),
+        ),
+        if (isEditing)
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(
+                  Icons.check_circle_outline,
+                  color: Colors.green,
+                ),
+                onPressed: onSaveTap,
+              ),
+              IconButton(
+                icon: const Icon(Icons.cancel_outlined, color: Colors.red),
+                onPressed: onCancelTap,
+              ),
+            ],
+          )
+        else
+          IconButton(
+            icon: const Icon(
+              Icons.edit_outlined,
+              color: Color(0xFFE68B2B),
+              size: 20,
+            ),
+            onPressed: onEditTap,
+          ),
+      ],
+    );
+  }
+
+  Widget _numberedListItem(int index, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${index + 1}.',
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF4A2104),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w400,
+                color: Color(0xFF4A2104),
+                height: 1.4,
+              ),
+              textAlign: TextAlign.justify,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final int rating = 4;
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFFFFAF2),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF662B0E)),
+        ),
+      );
+    }
+
+    final String namaResep = _bookmarkData!['nama'] ?? 'Judul Resep';
+    final String deskripsi =
+        _bookmarkData!['deskripsi'] ?? 'Deskripsi belum tersedia.';
+    final String imageUrl =
+        _bookmarkData!['image_url'] ?? 'assets/images/default.png';
+    final int ratingInt =
+        (_bookmarkData!['rating'] is num)
+            ? _bookmarkData!['rating'].toInt()
+            : 0;
+    final String waktuMasak = _bookmarkData!['waktu_masak'] ?? 'N/A';
+    final String userUidPengupload = _bookmarkData!['user_id'] ?? '';
+    final List<dynamic> bahanDataList = _bookmarkData!['bahan'] ?? [];
+    final dynamic caraMembuatRaw = _bookmarkData!['cara_membuat'];
+
+    List<String> caraMembuatDataList;
+    if (caraMembuatRaw is String) {
+      caraMembuatDataList =
+          caraMembuatRaw.split('\n').where((s) => s.trim().isNotEmpty).toList();
+    } else if (caraMembuatRaw is List) {
+      caraMembuatDataList = caraMembuatRaw.map((e) => e.toString()).toList();
+    } else {
+      caraMembuatDataList = ['Langkah-langkah belum tersedia.'];
+    }
+
+    final bool isNetworkRecipeImage = imageUrl.startsWith('http');
+    final bool isLocalFileRecipeImage =
+        imageUrl.startsWith('/data/user/') ||
+        imageUrl.startsWith('/storage/emulated/');
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFFAF2),
@@ -21,79 +263,155 @@ class BookmarkDetailPage extends StatelessWidget {
         children: [
           SingleChildScrollView(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(30),
                     bottomRight: Radius.circular(30),
                   ),
-                  child: Image.asset(
-                    imagePath,
-                    width: double.infinity,
-                    height: 220,
-                    fit: BoxFit.cover,
-                  ),
+                  child:
+                      isNetworkRecipeImage
+                          ? Image.network(
+                            imageUrl,
+                            width: double.infinity,
+                            height: 220,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (c, e, s) => Image.asset(
+                                  'assets/images/default.png',
+                                  width: double.infinity,
+                                  height: 220,
+                                  fit: BoxFit.cover,
+                                ),
+                          )
+                          : isLocalFileRecipeImage
+                          ? Image.file(
+                            File(imageUrl),
+                            width: double.infinity,
+                            height: 220,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (c, e, s) => Image.asset(
+                                  'assets/images/default.png',
+                                  width: double.infinity,
+                                  height: 220,
+                                  fit: BoxFit.cover,
+                                ),
+                          )
+                          : Image.asset(
+                            imageUrl,
+                            width: double.infinity,
+                            height: 220,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (c, e, s) => Image.asset(
+                                  'assets/images/default.png',
+                                  width: double.infinity,
+                                  height: 220,
+                                  fit: BoxFit.cover,
+                                ),
+                          ),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          const CircleAvatar(
-                            radius: 20,
-                            backgroundImage: AssetImage(
-                              'assets/images/profilewanda.jpg',
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text(
-                                'Wanda • 01/06/2025',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF4A2104),
+                      // --- PERBAIKAN: Gunakan FutureBuilder untuk mengambil data penulis resep ---
+                      FutureBuilder<DocumentSnapshot>(
+                        future:
+                            userUidPengupload.isNotEmpty
+                                ? FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(userUidPengupload)
+                                    .get()
+                                : null,
+                        builder: (context, userSnapshot) {
+                          if (userSnapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                              child: SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
                                 ),
                               ),
-                              Text(
-                                '@wandaarma',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFF4A2104),
-                                ),
+                            );
+                          }
+
+                          String authorName = 'Anonim';
+                          String authorUsername = '@anonim';
+                          String? authorProfileImageUrl;
+
+                          if (userSnapshot.hasData &&
+                              userSnapshot.data!.exists) {
+                            final userData =
+                                userSnapshot.data!.data()
+                                    as Map<String, dynamic>;
+                            authorName = userData['nama'] ?? 'Anonim';
+                            authorUsername =
+                                '@${userData['username'] ?? 'anonim'}';
+                            authorProfileImageUrl =
+                                userData['profile_image_url'];
+                          }
+
+                          return Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundImage:
+                                    (authorProfileImageUrl != null)
+                                        ? NetworkImage(authorProfileImageUrl)
+                                        : const AssetImage(
+                                              'assets/images/profilemale.jpeg',
+                                            )
+                                            as ImageProvider,
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    authorName,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF4A2104),
+                                    ),
+                                  ),
+                                  Text(
+                                    authorUsername,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w400,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
-                          ),
-                        ],
+                          );
+                        },
                       ),
                       const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Text(
-                                'Tahu Bakso',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF4A2104),
-                                ),
+                          Expanded(
+                            child: Text(
+                              namaResep,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF4A2104),
                               ),
-                              SizedBox(width: 5),
-                              Icon(
-                                Icons.edit,
-                                color: Color(0xFFE68B2B),
-                                size: 20,
-                              ),
-                            ],
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
+                          const SizedBox(width: 5),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -103,17 +421,19 @@ class BookmarkDetailPage extends StatelessWidget {
                               color: const Color(0xFFFFEACC),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Row(
+                            child: Row(
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.timer,
                                   size: 18,
                                   color: Color(0xFFE68B2B),
                                 ),
-                                SizedBox(width: 4),
+                                const SizedBox(width: 4),
                                 Text(
-                                  "30 min",
-                                  style: TextStyle(color: Color(0xFF4A2104)),
+                                  waktuMasak,
+                                  style: const TextStyle(
+                                    color: Color(0xFF4A2104),
+                                  ),
                                 ),
                               ],
                             ),
@@ -121,88 +441,124 @@ class BookmarkDetailPage extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 4),
-
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: List.generate(5, (index) {
-                              return Icon(
-                                index < rating ? Icons.star : Icons.star_border,
-                                color: const Color(0xFFE68B2B),
-                                size: 16,
-                              );
-                            }),
+                      Row(
+                        children: List.generate(
+                          5,
+                          (index) => Icon(
+                            index < ratingInt ? Icons.star : Icons.star_border,
+                            color: const Color(0xFFE68B2B),
+                            size: 16,
                           ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Disukai oleh +99 orang',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w200,
-                              color: Color(0xFF4A2104),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Camilan gurih yang terdiri dari tahu yang diisi dengan adonan bakso, kemudian dikukus atau digoreng hingga matang.',
-                        style: TextStyle(
+                      const SizedBox(height: 16),
+                      Text(
+                        deskripsi,
+                        style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w400,
                           color: Color(0xFF4A2104),
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      _sectionTitle("Bahan - Bahan"),
-                      _bulletText("1 buah tahu putih"),
-                      _bulletText("250gr campuran daging ayam dan sapi"),
-                      _bulletText("2 siung bawang putih"),
-                      _bulletText("1 batang daun bawang"),
-                      _bulletText("Garam, merica, penyedap secukupnya"),
-                      const SizedBox(height: 16),
-                      _sectionTitle("Cara Membuat"),
-                      _bulletText("Campur semua bahan hingga rata."),
-                      _bulletText("Isi bagian tengah tahu dengan adonan."),
-                      _bulletText("Kukus atau goreng hingga matang."),
-                      const SizedBox(height: 16),
-                      _sectionTitle("Catatan Pribadi"),
+                      const SizedBox(height: 24),
+
+                      // --- Bagian Resep dan Catatan ---
+                      _buildSectionTitle("Bahan - Bahan"),
                       const SizedBox(height: 8),
-                      TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Masukkan Catatan',
-                          hintStyle: const TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFFB7B7B7),
-                            fontWeight: FontWeight.w400,
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(
-                              color: Color(
-                                0xFFE68B2B,
-                              ), 
-                              width: 1,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children:
+                            bahanDataList.asMap().entries.map<Widget>((entry) {
+                              dynamic item = entry.value;
+                              if (item is Map<String, dynamic>) {
+                                return _numberedListItem(
+                                  entry.key,
+                                  '${item['nama'] ?? ''}: ${item['jumlah'] ?? ''}',
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            }).toList(),
+                      ),
+                      const SizedBox(height: 24),
+
+                      _buildSectionTitle("Cara Membuat"),
+                      const SizedBox(height: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children:
+                            caraMembuatDataList
+                                .asMap()
+                                .entries
+                                .map<Widget>(
+                                  (entry) =>
+                                      _numberedListItem(entry.key, entry.value),
+                                )
+                                .toList(),
+                      ),
+                      const SizedBox(height: 24),
+
+                      const Divider(),
+                      const SizedBox(height: 16),
+
+                      _buildEditableSectionTitle(
+                        "Catatan Pribadi",
+                        _isEditingCatatan,
+                        () => setState(() => _isEditingCatatan = true),
+                        () {
+                          _updateCatatan();
+                          setState(() => _isEditingCatatan = false);
+                        },
+                        () {
+                          setState(() {
+                            _catatanController.text =
+                                _bookmarkData!['catatan'] ?? '';
+                            _isEditingCatatan = false;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      if (_isEditingCatatan)
+                        TextFormField(
+                          controller: _catatanController,
+                          maxLines: null,
+                          keyboardType: TextInputType.multiline,
+                          decoration: InputDecoration(
+                            hintText: 'Tulis catatan pribadimu...',
+                            isDense: true,
+                            fillColor: Colors.white,
+                            filled: true,
+                            contentPadding: const EdgeInsets.all(12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(
-                              color: Color(0xFF4A2104),
-                              width: 1,
+                        )
+                      else
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _catatanController.text.isEmpty
+                                ? 'Ketuk ikon edit untuk menambahkan catatan.'
+                                : _catatanController.text,
+                            style: TextStyle(
+                              fontSize: 15,
+                              color:
+                                  _catatanController.text.isEmpty
+                                      ? Colors.grey[600]
+                                      : const Color(0xFF4A2104),
+                              height: 1.5,
+                              fontStyle:
+                                  _catatanController.text.isEmpty
+                                      ? FontStyle.italic
+                                      : FontStyle.normal,
                             ),
                           ),
                         ),
-                        maxLines: 3,
-                      ),
                       const SizedBox(height: 30),
                     ],
                   ),
@@ -210,18 +566,11 @@ class BookmarkDetailPage extends StatelessWidget {
               ],
             ),
           ),
-
-          // Tombol Back
           Positioned(
-            top: 30,
+            top: 40,
             left: 16,
             child: GestureDetector(
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const BookmarkPage()),
-                );
-              },
+              onTap: () => Navigator.pop(context),
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -233,37 +582,6 @@ class BookmarkDetailPage extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _sectionTitle(String text) {
-    return Row(
-      children: [
-        Text(
-          text,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-            color: Color(0xFF4A2104),
-          ),
-        ),
-        const SizedBox(width: 6),
-        const Icon(Icons.edit, color: Color(0xFFE68B2B), size: 20),
-      ],
-    );
-  }
-
-  Widget _bulletText(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w400,
-          color: Color(0xFF4A2104),
-        ),
       ),
     );
   }

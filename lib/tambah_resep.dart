@@ -3,18 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
+<<<<<<< HEAD
 import 'search_bahan.dart';
 import 'notification_page.dart';
+=======
+import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
+import 'search_bahan.dart'; // Asumsi file ini ada di proyek Anda
+>>>>>>> dffb79249dde4ab5f1342fcdb3902a61f085c54f
 
 class TambahResepPage extends StatefulWidget {
   final String? documentId;
   final Map<String, dynamic>? initialData;
-  
-  const TambahResepPage({
-    super.key,
-    this.documentId,
-    this.initialData,
-  });
+
+  const TambahResepPage({super.key, this.documentId, this.initialData});
 
   @override
   State<TambahResepPage> createState() => _TambahResepPageState();
@@ -27,11 +28,12 @@ class _TambahResepPageState extends State<TambahResepPage> {
   final _waktuJamController = TextEditingController();
   final _waktuMenitController = TextEditingController();
   final _caraMembuatController = TextEditingController();
-  
+
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
   List<Map<String, dynamic>> _selectedBahan = [];
   bool _isLoading = false;
+  bool _isShared = false; // Tambahkan state untuk status berbagi
 
   bool get isEdit => widget.documentId != null;
 
@@ -48,7 +50,7 @@ class _TambahResepPageState extends State<TambahResepPage> {
     _namaController.text = data['nama'] ?? '';
     _deskripsiController.text = data['deskripsi'] ?? '';
     _caraMembuatController.text = data['cara_membuat'] ?? '';
-    
+
     // Parse waktu masak
     String waktu = data['waktu_masak'] ?? '0 jam 30 menit';
     List<String> parts = waktu.split(' ');
@@ -56,11 +58,14 @@ class _TambahResepPageState extends State<TambahResepPage> {
       _waktuJamController.text = parts[0];
       _waktuMenitController.text = parts[2];
     }
-    
+
     // Load bahan
     if (data['bahan'] != null) {
       _selectedBahan = List<Map<String, dynamic>>.from(data['bahan']);
     }
+
+    // Load status berbagi
+    _isShared = data['is_shared'] ?? false;
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -71,7 +76,7 @@ class _TambahResepPageState extends State<TambahResepPage> {
         maxHeight: 1080,
         imageQuality: 80,
       );
-      
+
       if (image != null) {
         setState(() {
           _selectedImage = File(image.path);
@@ -106,13 +111,18 @@ class _TambahResepPageState extends State<TambahResepPage> {
                       'Pilih Foto Resep',
                       style: TextStyle(
                         fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontWeight:
+                            FontWeight
+                                .w600, // Mengubah FontWeight menjadi w600 (semi-bold)
                         color: Color(0xFF4A2104),
                       ),
                     ),
                     const SizedBox(height: 20),
                     ListTile(
-                      leading: const Icon(Icons.camera_alt, color: Color(0xFFE68B2B)),
+                      leading: const Icon(
+                        Icons.camera_alt,
+                        color: Color(0xFFE68B2B),
+                      ),
                       title: const Text('Kamera'),
                       onTap: () {
                         Navigator.pop(context);
@@ -120,7 +130,10 @@ class _TambahResepPageState extends State<TambahResepPage> {
                       },
                     ),
                     ListTile(
-                      leading: const Icon(Icons.photo_library, color: Color(0xFFE68B2B)),
+                      leading: const Icon(
+                        Icons.photo_library,
+                        color: Color(0xFFE68B2B),
+                      ),
                       title: const Text('Galeri'),
                       onTap: () {
                         Navigator.pop(context);
@@ -140,15 +153,15 @@ class _TambahResepPageState extends State<TambahResepPage> {
   Future<void> _searchBahan() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const SearchBahanPage(),
-      ),
+      MaterialPageRoute(builder: (context) => const SearchBahanPage()),
     );
-    
+
     if (result != null) {
       setState(() {
         // Cek apakah bahan sudah ada
-        bool exists = _selectedBahan.any((bahan) => bahan['nama'] == result['nama']);
+        bool exists = _selectedBahan.any(
+          (bahan) => bahan['nama'] == result['nama'],
+        );
         if (!exists) {
           _selectedBahan.add({
             'nama': result['nama'],
@@ -169,7 +182,7 @@ class _TambahResepPageState extends State<TambahResepPage> {
     TextEditingController jumlahController = TextEditingController(
       text: _selectedBahan[index]['jumlah'],
     );
-    
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -205,41 +218,41 @@ class _TambahResepPageState extends State<TambahResepPage> {
   Future<String?> _uploadImage(File imageFile) async {
     try {
       print('📤 Starting image upload...');
-      
+
       // Check file size
       int fileSizeInBytes = await imageFile.length();
       double fileSizeInMB = fileSizeInBytes / (1024 * 1024);
       print('📤 File size: ${fileSizeInMB.toStringAsFixed(2)} MB');
-      
+
       if (fileSizeInMB > 10) {
         throw Exception('File terlalu besar (max 10MB)');
       }
-      
+
       // Create unique filename
       String fileName = 'resep_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      
+
       // Upload to Firebase Storage
       Reference storageRef = FirebaseStorage.instance
           .ref()
           .child('resep_images')
           .child(fileName);
-      
+
       print('📤 Uploading to: resep_images/$fileName');
-      
+
       // Set metadata
       SettableMetadata metadata = SettableMetadata(
         contentType: 'image/jpeg',
         customMetadata: {'uploaded_by': 'dapurame_app'},
       );
-      
+
       UploadTask uploadTask = storageRef.putFile(imageFile, metadata);
-      
+
       // Add progress listener
       uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
         double progress = snapshot.bytesTransferred / snapshot.totalBytes;
         print('📤 Upload progress: ${(progress * 100).toStringAsFixed(1)}%');
       });
-      
+
       // Set timeout
       TaskSnapshot snapshot = await uploadTask.timeout(
         const Duration(seconds: 30),
@@ -249,7 +262,7 @@ class _TambahResepPageState extends State<TambahResepPage> {
           throw Exception('Upload timeout setelah 30 detik');
         },
       );
-      
+
       // Get download URL
       String downloadUrl = await snapshot.ref.getDownloadURL();
       print('✅ Upload successful: $downloadUrl');
@@ -268,7 +281,8 @@ class _TambahResepPageState extends State<TambahResepPage> {
     }
   }
 
-  Future<void> _saveResep() async {
+  Future<void> _saveResep({bool fromShare = false}) async {
+    // Tambahkan parameter fromShare
     if (!_formKey.currentState!.validate()) return;
     if (_selectedBahan.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -286,21 +300,40 @@ class _TambahResepPageState extends State<TambahResepPage> {
 
     try {
       String? imageUrl;
-      
+
+      // Mendapatkan user ID dari Firebase Authentication
+      final User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Anda harus login untuk menyimpan resep.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+      final String userId = currentUser.uid; // Dapatkan UID pengguna
+
       // Skip image upload for now (Firebase Storage needs billing)
       if (_selectedImage != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('📷 Gambar disimpan lokal (Firebase Storage perlu upgrade)'),
+            content: Text(
+              '📷 Gambar disimpan lokal (Firebase Storage perlu upgrade)',
+            ),
             backgroundColor: Colors.orange,
           ),
         );
         // Store local path as placeholder
         imageUrl = _selectedImage!.path;
       }
-      
-      String waktuMasak = '${_waktuJamController.text} jam ${_waktuMenitController.text} menit';
-      
+
+      String waktuMasak =
+          '${_waktuJamController.text} jam ${_waktuMenitController.text} menit';
+
       Map<String, dynamic> resepData = {
         'nama': _namaController.text.trim(),
         'deskripsi': _deskripsiController.text.trim(),
@@ -309,6 +342,8 @@ class _TambahResepPageState extends State<TambahResepPage> {
         'cara_membuat': _caraMembuatController.text.trim(),
         'rating': 5, // Default rating
         'updated_at': FieldValue.serverTimestamp(),
+        'is_shared':
+            fromShare, // Gunakan parameter fromShare untuk set nilai is_shared
       };
 
       // Add image URL if available
@@ -321,7 +356,15 @@ class _TambahResepPageState extends State<TambahResepPage> {
 
       if (!isEdit) {
         resepData['created_at'] = FieldValue.serverTimestamp();
-        resepData['user_id'] = 'current_user'; // TODO: Ganti dengan user ID sebenarnya
+        resepData['user_id'] = userId; // Gunakan user ID yang sebenarnya
+      } else {
+        // Pastikan user_id tidak berubah saat update jika sudah ada
+        if (widget.initialData!.containsKey('user_id')) {
+          resepData['user_id'] = widget.initialData!['user_id'];
+        } else {
+          resepData['user_id'] =
+              userId; // Set jika tidak ada di data awal (kasus jarang)
+        }
       }
 
       if (isEdit) {
@@ -329,7 +372,7 @@ class _TambahResepPageState extends State<TambahResepPage> {
             .collection('resep')
             .doc(widget.documentId)
             .update(resepData);
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('✅ Resep berhasil diperbarui!'),
@@ -337,10 +380,8 @@ class _TambahResepPageState extends State<TambahResepPage> {
           ),
         );
       } else {
-        await FirebaseFirestore.instance
-            .collection('resep')
-            .add(resepData);
-        
+        await FirebaseFirestore.instance.collection('resep').add(resepData);
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('✅ Resep berhasil disimpan!'),
@@ -391,8 +432,10 @@ class _TambahResepPageState extends State<TambahResepPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.share, color: Colors.white),
-            onPressed: () {
-              // TODO: Implement share functionality
+            onPressed: () async {
+              // Panggil _saveResep dengan fromShare = true
+              await _saveResep(fromShare: true);
+              // Navigator.pop(context) sudah ada di dalam _saveResep
             },
           ),
         ],
@@ -415,81 +458,92 @@ class _TambahResepPageState extends State<TambahResepPage> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.grey[300]!),
                   ),
-                  child: _selectedImage != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.file(
-                            _selectedImage!,
-                            fit: BoxFit.cover,
-                          ),
-                        )
-                      : (isEdit && 
-                         widget.initialData != null && 
-                         widget.initialData!['image_url'] != null &&
-                         widget.initialData!['image_url'].toString().startsWith('http'))
+                  child:
+                      _selectedImage != null
                           ? ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.network(
-                                widget.initialData!['image_url'],
-                                fit: BoxFit.cover,
-                                loadingBuilder: (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Center(
-                                    child: CircularProgressIndicator(
-                                      value: loadingProgress.expectedTotalBytes != null
-                                          ? loadingProgress.cumulativeBytesLoaded /
-                                              loadingProgress.expectedTotalBytes!
-                                          : null,
-                                    ),
-                                  );
-                                },
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.broken_image,
-                                        size: 50,
-                                        color: Colors.grey,
-                                      ),
-                                      Text('Gagal memuat gambar'),
-                                    ],
-                                  );
-                                },
-                              ),
-                            )
-                          : const Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.camera_alt,
-                                  size: 50,
-                                  color: Color(0xFFE68B2B),
-                                ),
-                                SizedBox(height: 8),
-                                Text(
-                                  'Upload Gambar',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Color(0xFF4A2104),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Tap untuk pilih foto',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFFB7B7B7),
-                                  ),
-                                ),
-                              ],
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(
+                              _selectedImage!,
+                              fit: BoxFit.cover,
                             ),
+                          )
+                          : (isEdit &&
+                              widget.initialData != null &&
+                              widget.initialData!['image_url'] != null &&
+                              widget.initialData!['image_url']
+                                  .toString()
+                                  .startsWith('http'))
+                          ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              widget.initialData!['image_url'],
+                              fit: BoxFit.cover,
+                              loadingBuilder: (
+                                context,
+                                child,
+                                loadingProgress,
+                              ) {
+                                if (loadingProgress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value:
+                                        loadingProgress.expectedTotalBytes !=
+                                                null
+                                            ? loadingProgress
+                                                    .cumulativeBytesLoaded /
+                                                loadingProgress
+                                                    .expectedTotalBytes!
+                                            : null,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.broken_image,
+                                      size: 50,
+                                      color: Colors.grey,
+                                    ),
+                                    Text('Gagal memuat gambar'),
+                                  ],
+                                );
+                              },
+                            ),
+                          )
+                          : const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.camera_alt,
+                                size: 50,
+                                color: Color(0xFFE68B2B),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Upload Gambar',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Color(0xFF4A2104),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Tap untuk pilih foto',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFFB7B7B7),
+                                ),
+                              ),
+                            ],
+                          ),
                 ),
               ),
-              
+
               const SizedBox(height: 20),
-              
+
               // Nama Resep
               const Text(
                 'Nama Resep',
@@ -527,9 +581,9 @@ class _TambahResepPageState extends State<TambahResepPage> {
                   return null;
                 },
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Deskripsi Resep
               const Text(
                 'Deskripsi Resep',
@@ -568,9 +622,9 @@ class _TambahResepPageState extends State<TambahResepPage> {
                   return null;
                 },
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Lama Memasak
               const Text(
                 'Lama Memasak',
@@ -595,15 +649,21 @@ class _TambahResepPageState extends State<TambahResepPage> {
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFFE68B2B)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE68B2B),
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFFE68B2B)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE68B2B),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFF4A2104)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF4A2104),
+                          ),
                         ),
                       ),
                       validator: (value) {
@@ -627,15 +687,21 @@ class _TambahResepPageState extends State<TambahResepPage> {
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFFE68B2B)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE68B2B),
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFFE68B2B)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE68B2B),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFF4A2104)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF4A2104),
+                          ),
                         ),
                       ),
                       validator: (value) {
@@ -648,9 +714,9 @@ class _TambahResepPageState extends State<TambahResepPage> {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Bahan-Bahan
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -673,14 +739,17 @@ class _TambahResepPageState extends State<TambahResepPage> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                     ),
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 8),
-              
+
               // List Bahan
               if (_selectedBahan.isEmpty)
                 Container(
@@ -711,68 +780,72 @@ class _TambahResepPageState extends State<TambahResepPage> {
                 )
               else
                 Column(
-                  children: _selectedBahan.asMap().entries.map((entry) {
-                    int index = entry.key;
-                    Map<String, dynamic> bahan = entry.value;
-                    
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFE68B2B)),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              bahan['nama'],
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF4A2104),
-                              ),
-                            ),
+                  children:
+                      _selectedBahan.asMap().entries.map((entry) {
+                        int index = entry.key;
+                        Map<String, dynamic> bahan = entry.value;
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFE68B2B)),
                           ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => _editJumlahBahan(index),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFEACC),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 2,
                                 child: Text(
-                                  bahan['jumlah'],
+                                  bahan['nama'],
                                   style: const TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
                                     color: Color(0xFF4A2104),
                                   ),
-                                  textAlign: TextAlign.center,
                                 ),
                               ),
-                            ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => _editJumlahBahan(index),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFEACC),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      bahan['jumlah'],
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF4A2104),
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () => _removeBahan(index),
+                                child: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                  size: 20,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () => _removeBahan(index),
-                            child: const Icon(
-                              Icons.delete,
-                              color: Colors.red,
-                              size: 20,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+                        );
+                      }).toList(),
                 ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Cara Membuat
               const Text(
                 'Cara Membuat',
@@ -811,9 +884,9 @@ class _TambahResepPageState extends State<TambahResepPage> {
                   return null;
                 },
               ),
-              
+
               const SizedBox(height: 30),
-              
+
               // Tombol Simpan
               SizedBox(
                 width: double.infinity,
@@ -827,32 +900,33 @@ class _TambahResepPageState extends State<TambahResepPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: _isLoading
-                      ? const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
+                  child:
+                      _isLoading
+                          ? const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
                               ),
+                              SizedBox(width: 12),
+                              Text('Menyimpan...'),
+                            ],
+                          )
+                          : Text(
+                            isEdit ? 'Update Resep' : 'Simpan Resep',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
-                            SizedBox(width: 12),
-                            Text('Menyimpan...'),
-                          ],
-                        )
-                      : Text(
-                          isEdit ? 'Update Resep' : 'Simpan Resep',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
                           ),
-                        ),
                 ),
               ),
-              
+
               const SizedBox(height: 20),
             ],
           ),

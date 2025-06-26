@@ -1,53 +1,41 @@
+// lib/home_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'navbar.dart';
-import 'resepku.dart';
-import 'bookmark.dart';
-import 'nutrisi.dart';
-import 'notification_page.dart';
-import 'detail_resep.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io'; // Diperlukan untuk Image.file
 
+// Impor semua halaman untuk navigasi
+import 'package:dapurame/navbar.dart';
+import 'package:dapurame/nutrisi.dart';
+import 'package:dapurame/resepku.dart';
+import 'package:dapurame/bookmark.dart';
+import 'package:dapurame/profile.dart';
+import 'package:dapurame/notification_page.dart';
+import 'package:dapurame/detail_resep.dart';
+
+// Catatan: Fungsi main() ini sebaiknya ada di file terpisah (main.dart)
+// untuk kerapian proyek.
 void main() {
-  // Mengatur style status bar agar menyatu dengan desain
+  // Pastikan Firebase sudah diinisialisasi di file main.dart utama Anda.
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(
-    SystemUiOverlayStyle(
-      statusBarColor:
-          Colors.transparent, // Membuat background status bar transparan
-      statusBarIconBrightness:
-          Brightness.dark, // Membuat ikon (baterai, jam) menjadi hitam
-      systemNavigationBarColor: Colors.white, // Navigation bar tidak berubah
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
     ),
   );
   runApp(
-    MaterialApp(
-      debugShowCheckedModeBanner:
-          false, // Menghilangkan tulisan DEBUG di kanan atas
-      home: HomePage(),
+    const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: HomePage(), // Mulai dari HomePage sebagai induk navigasi
     ),
   );
 }
 
-// [DATA BARU] Untuk item di carousel horizontal
-final List<Map<String, String>> bannerItems = [
-  {
-    'image': 'assets/images/ramen.jpeg',
-    'tag': 'Resep Terbaru!',
-    'title': 'Ramen Ookamizu',
-  },
-  {
-    'image': 'assets/images/sushi.jpg', // GAMBAR BARU
-    'tag': 'Paling Favorit!',
-    'title': 'Sushi Shinomiya',
-  },
-  {
-    'image': 'assets/images/cake.jpg', // GAMBAR BARU
-    'tag': 'Hidangan Penutup!',
-    'title': 'Cake Berry',
-  },
-];
-
-// ubah dari StatelessWidget menjadi StatefulWidget
+// --- BAGIAN INDUK NAVIGASI ---
+// HomePage sekarang menjadi "Induk" atau "Shell" untuk navigasi.
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -56,13 +44,69 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  int _currentIndex = 0;
+
+  // Daftar halaman yang akan ditampilkan sesuai urutan navbar
+  final List<Widget> _pages = [
+    const HomePageContent(), // Konten untuk Home (index 0)
+    const NutrisiPage(), // Halaman Nutrisi (index 1)
+    const ResepkuPage(), // Halaman Resepku (index 2)
+    const BookmarkPage(), // Halaman Bookmark (index 3)
+    const ProfilePage(), // Halaman Profil (index 4)
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _pages[_currentIndex],
+      bottomNavigationBar: CustomNavbar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          // Cukup update state, UI akan otomatis berganti halaman
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+      ),
+    );
+  }
+}
+
+// --- BAGIAN KONTEN HALAMAN HOME ---
+// Widget ini berisi UI spesifik untuk tab Home.
+class HomePageContent extends StatefulWidget {
+  const HomePageContent({super.key});
+
+  @override
+  State<HomePageContent> createState() => _HomePageContentState();
+}
+
+class _HomePageContentState extends State<HomePageContent> {
   int _currentPageIndex = 0;
-  // Controller untuk PageView
   final PageController _pageController = PageController();
+  String _greetingName = 'Pengguna'; // Default nama
+  User? _currentUser; // Tambahkan ini untuk melacak pengguna saat ini
+  Set<String> _bookmarkedRecipeIds = {}; // Set untuk menyimpan ID resep yang dibookmark
 
-  // Tambahkan state untuk bookmark
-  List<Map<String, String>> bookmarkedRecipes = [];
+  final List<Map<String, String>> bannerItems = [
+    {
+      'image': 'assets/images/ramen.jpeg',
+      'tag': 'Resep Terbaru!',
+      'title': 'Ramen Ookamizu',
+    },
+    {
+      'image': 'assets/images/sushi.jpg',
+      'tag': 'Paling Favorit!',
+      'title': 'Sushi Shinomiya',
+    },
+    {
+      'image': 'assets/images/cake.jpg',
+      'tag': 'Hidangan Penutup!',
+      'title': 'Cake Berry',
+    },
+  ];
 
+<<<<<<< HEAD
   void _toggleBookmark(Map<String, String> recipe) {
     setState(() {
       if (bookmarkedRecipes.any((r) => r['title'] == recipe['title'])) {
@@ -81,43 +125,181 @@ class _HomePageState extends State<HomePage> {
           body: 'Resep "${recipe['title']}" telah ditambahkan ke bookmark Anda.',
           payload: 'added_bookmark_${recipe['title']}',
         );
+=======
+  @override
+  void initState() {
+    super.initState();
+    _currentUser = FirebaseAuth.instance.currentUser;
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (mounted) {
+        setState(() {
+          _currentUser = user;
+        });
+        if (user != null) {
+          _fetchUserData();
+          _fetchUserBookmarks();
+        } else {
+          // Clear bookmarks if user logs out
+          setState(() {
+            _greetingName = 'Pengguna';
+            _bookmarkedRecipeIds.clear();
+          });
+        }
+>>>>>>> dffb79249dde4ab5f1342fcdb3902a61f085c54f
       }
     });
+    if (_currentUser != null) {
+      _fetchUserData();
+      _fetchUserBookmarks();
+    }
   }
 
-  // Jangan lupa dispose controller saat widget tidak lagi digunakan
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
   }
 
+  // Fungsi untuk mengambil nama pengguna dari Firestore
+  Future<void> _fetchUserData() async {
+    if (_currentUser != null) {
+      DocumentSnapshot userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(_currentUser!.uid)
+              .get();
+      if (userDoc.exists && mounted) {
+        setState(() {
+          _greetingName = userDoc.get('username') ?? 'Pengguna';
+        });
+      }
+    }
+  }
+
+  // Fungsi untuk mengambil ID resep yang dibookmark oleh pengguna
+  Future<void> _fetchUserBookmarks() async {
+    if (_currentUser == null) {
+      setState(() {
+        _bookmarkedRecipeIds.clear();
+      });
+      return;
+    }
+    try {
+      QuerySnapshot bookmarkSnapshot = await FirebaseFirestore.instance
+          .collection('bookmark')
+          .where('bookmarked_by_user_id', isEqualTo: _currentUser!.uid)
+          .get();
+
+      if (mounted) {
+        setState(() {
+          _bookmarkedRecipeIds = bookmarkSnapshot.docs
+              .map((doc) => doc.get('original_recipe_id') as String)
+              .toSet();
+        });
+      }
+    } catch (e) {
+      print("Error fetching user bookmarks: $e");
+    }
+  }
+
+  // Fungsi untuk mem-bookmark atau unbookmark resep
+  Future<void> _toggleBookmark(
+    String recipeDocumentId,
+    Map<String, dynamic> recipeData,
+  ) async {
+    if (_currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Anda harus login untuk membookmark resep.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final isCurrentlyBookmarked = _bookmarkedRecipeIds.contains(recipeDocumentId);
+
+      if (isCurrentlyBookmarked) {
+        // Hapus bookmark
+        QuerySnapshot existingBookmarks = await FirebaseFirestore.instance
+            .collection('bookmark')
+            .where('original_recipe_id', isEqualTo: recipeDocumentId)
+            .where('bookmarked_by_user_id', isEqualTo: _currentUser!.uid)
+            .get();
+
+        for (DocumentSnapshot doc in existingBookmarks.docs) {
+          await doc.reference.delete();
+        }
+        if (mounted) {
+          setState(() {
+            _bookmarkedRecipeIds.remove(recipeDocumentId);
+          });
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Resep berhasil dihapus dari bookmark!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        // Tambah bookmark
+        Map<String, dynamic> bookmarkData = Map.from(recipeData);
+        bookmarkData['original_recipe_id'] = recipeDocumentId;
+        bookmarkData['bookmarked_by_user_id'] = _currentUser!.uid;
+        bookmarkData['bookmarked_at'] = FieldValue.serverTimestamp();
+        await FirebaseFirestore.instance
+            .collection('bookmark')
+            .add(bookmarkData);
+        if (mounted) {
+          setState(() {
+            _bookmarkedRecipeIds.add(recipeDocumentId);
+          });
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Resep berhasil ditambahkan ke bookmark!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal mengubah status bookmark: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFFFAF2),
+      backgroundColor: const Color(0xFFFFFAF2),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header dengan sapaan dan ikon notifikasi
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Halo, Wanda!',
-                    style: TextStyle(
+                    'Halo, $_greetingName!', // Sapaan dinamis menggunakan username
+                    style: const TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w900, // Adjusted font weight
-                      color: Color(0xFF8B4513), // Saddle Brown color
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF8B4513),
                     ),
                   ),
                   IconButton(
-                    icon: Icon(
+                    icon: const Icon(
                       Icons.notifications_none,
                       color: Color(0xFF8B4513),
-                    ), // Saddle Brown color
+                    ),
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -129,7 +311,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-              Text.rich(
+              const Text.rich(
                 TextSpan(
                   children: [
                     TextSpan(
@@ -144,7 +326,7 @@ class _HomePageState extends State<HomePage> {
                       text: 'Resep',
                       style: TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.bold, // Dipertebal
+                        fontWeight: FontWeight.bold,
                         color: Color(0xFF8B4513),
                       ),
                     ),
@@ -159,65 +341,58 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
               ),
-              SizedBox(height: 16.0),
+              const SizedBox(height: 16.0),
+
+              // Search Bar dan Filter
               Row(
                 children: [
-                  Expanded(
+                  const Expanded(
                     child: TextField(
                       decoration: InputDecoration(
                         hintText: 'Cari Resep',
-                        hintStyle: TextStyle(
-                          color: Colors.grey,
-                        ), // Added hint text style
+                        hintStyle: TextStyle(color: Colors.grey),
                         prefixIcon: Icon(
                           Icons.search,
                           color: Color(0xFF8B4513),
-                        ), // Changed search icon color
+                        ),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10.0),
-                          borderSide: BorderSide(color: Color(0xFF8B4513)),
+                          borderRadius: BorderRadius.all(Radius.circular(10.0)),
+                          borderSide: BorderSide.none,
                         ),
                         filled: true,
-                        fillColor: Color(0xFFFFFAF2), // Beige color
+                        fillColor: Colors.white,
                         contentPadding: EdgeInsets.symmetric(vertical: 10.0),
                       ),
                     ),
                   ),
-                  SizedBox(width: 8.0),
+                  const SizedBox(width: 8.0),
                   Container(
                     decoration: BoxDecoration(
-                      color: Color(0xFF8B4513), // Saddle Brown color
+                      color: const Color(0xFF8B4513),
                       borderRadius: BorderRadius.circular(10.0),
                     ),
                     child: IconButton(
-                      icon: Icon(Icons.tune, color: Colors.white),
-                      onPressed: () {
-                        // Handle filter icon press
-                      },
+                      icon: const Icon(Icons.tune, color: Colors.white),
+                      onPressed: () {},
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 24.0),
 
-              // Memberi jarak antara container atas dan gambar ramen
-              SizedBox(height: 24.0),
-
-              // Mengganti ListView dengan PageView.builder
+              // Carousel Banner Resep
               SizedBox(
                 height: 200.0,
                 child: PageView.builder(
                   controller: _pageController,
                   itemCount: bannerItems.length,
-                  // Callback ini akan terpanggil setiap kali halaman berganti
                   onPageChanged: (index) {
-                    // Perbarui state dengan indeks baru, UI akan otomatis rebuild
                     setState(() {
                       _currentPageIndex = index;
                     });
                   },
                   itemBuilder: (context, index) {
                     final item = bannerItems[index];
-                    // Tambahkan padding di sini agar ada jarak antar item
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4.0),
                       child: _buildBannerCard(
@@ -229,134 +404,130 @@ class _HomePageState extends State<HomePage> {
                   },
                 ),
               ),
+              const SizedBox(height: 18.0),
 
-              SizedBox(height: 18.0),
-              // Dot Indicator yang interaktif
+              // Dot Indicator
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(bannerItems.length, (index) {
                   return Container(
-                    margin: EdgeInsets.symmetric(horizontal: 4.0),
+                    margin: const EdgeInsets.symmetric(horizontal: 4.0),
                     width: 8.0,
                     height: 8.0,
                     decoration: BoxDecoration(
-                      // Warna ditentukan oleh state _currentPageIndex
                       color:
                           _currentPageIndex == index
-                              ? Color(0xFF8B4513) // Warna aktif
-                              : Color.fromRGBO(
-                                230,
-                                139,
-                                43,
-                                0.5,
-                              ), // Warna non-aktif
+                              ? const Color(0xFF8B4513)
+                              : const Color.fromRGBO(230, 139, 43, 0.5),
                       shape: BoxShape.circle,
                     ),
                   );
                 }),
               ),
+              const SizedBox(height: 26.0),
 
-              SizedBox(height: 26.0),
-
-              Text(
-                'Paling Diminati',
+              // Grid Resep Dinamis dari Firestore
+              const Text(
+                'Resep Untuk Kamu',
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w900, // Adjusted font weight
-                  color: Color(0xFF8B4513), // Saddle Brown color
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF8B4513),
                 ),
               ),
-              SizedBox(height: 16.0),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16.0,
-                  mainAxisSpacing: 16.0,
-                  childAspectRatio:
-                      0.65, // Adjusted to give more vertical space
-                ),
-                itemCount: 6, // Number of recipe cards
-                itemBuilder: (context, index) {
-                  final List<Map<String, String>> recipes = [
-                    {
-                      'imagePath': 'assets/images/risolmayo.jpeg',
-                      'rating': '9.2',
-                      'title': 'Risol Mayo',
-                      'description':
-                          'Risol mayo adalah jajanan tradisional berbentuk gulungan yang memiliki berbagai...',
-                      'author': 'Maul - ITS',
-                      'time': '20 mins',
-                      'profileImagePath': 'assets/images/profilemale.jpeg',
-                    },
-                    {
-                      'imagePath': 'assets/images/nasipadang.jpg',
-                      'rating': '9.5',
-                      'title': 'Nasi Padang',
-                      'description':
-                          'Nasi Padang adalah makanan khas Minangkabau yang berupa nasi putih yang disajikan dengan berbagai macam',
-                      'author': 'Zumar - ITS',
-                      'time': '25 mins',
-                      'profileImagePath': 'assets/images/profilemale.jpeg',
-                    },
-                    {
-                      'imagePath': 'assets/images/rawon.jpeg',
-                      'rating': '8.7',
-                      'title': 'Nasi Rawon',
-                      'description':
-                          'Rawon adalah masakan sup daging sapi berkuah hitam yang merupakan hidangan khas Surabaya.',
-                      'author': 'Cindy - Unair',
-                      'time': '15 mins',
-                      'profileImagePath': 'assets/images/profilefemale.jpeg',
-                    },
-                    {
-                      'imagePath': 'assets/images/tahubakso.jpg',
-                      'rating': '8.5',
-                      'title': 'Tahu Bakso',
-                      'description':
-                          'Tahu Bakso adalah kuliner asal Semarang yang dibuat dari tahu yang tengahnya diberi isi bakso.',
-                      'author': 'Ruli - ITS',
-                      'time': '17 mins',
-                      'profileImagePath': 'assets/images/profilemale.jpeg',
-                    },
-                    {
-                      'imagePath': 'assets/images/tahu-tek.jpeg',
-                      'rating': '8.9',
-                      'title': 'Tahu Tek',
-                      'description':
-                          'Tahu Tek adalah kuliner yang terdiri dari tahu goreng, lontong, kentang, dan sedikit taoge yang disiram...',
-                      'author': 'Ruli - ITS',
-                      'time': '17 mins',
-                      'profileImagePath': 'assets/images/profilemale.jpeg',
-                    },
-                    {
-                      'imagePath': 'assets/images/sushi.jpg',
-                      'rating': '9.5',
-                      'title': 'Sushi',
-                      'description':
-                          'Sushi adalah makanan Jepang yang terdiri dari nasi yang dibentuk bersama lauk (neta) berupa makanan laut, daging, sayuran bakar atau sudah dimasak.',
-                      'author': 'Rony - Ubaya',
-                      'time': '17 mins',
-                      'profileImagePath': 'assets/images/profilemale.jpeg',
-                    },
-                  ];
+              const SizedBox(height: 16.0),
+              StreamBuilder<QuerySnapshot>(
+                stream:
+                    FirebaseFirestore.instance
+                        .collection('resep')
+                        .where('is_shared', isEqualTo: true)
+                        .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting)
+                    return const Center(child: CircularProgressIndicator());
+                  if (snapshot.hasError)
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+                    return const Center(
+                      child: Text('Tidak ada resep yang diunggah.'),
+                    );
 
-                  final recipe = recipes[index];
+                  final recipes = snapshot.data!.docs;
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16.0,
+                          mainAxisSpacing: 16.0,
+                          childAspectRatio: 0.65,
+                        ),
+                    itemCount: recipes.length,
+                    itemBuilder: (context, index) {
+                      final recipeDoc = recipes[index];
+                      final recipeData =
+                          recipeDoc.data() as Map<String, dynamic>;
+                      final String documentId = recipeDoc.id;
+                      final String userUid = recipeData['user_id'] ?? '';
 
-                  return _buildRecipeCard(
-                    imagePath: recipe['imagePath']!,
-                    rating: recipe['rating']!,
-                    title: recipe['title']!,
-                    description: recipe['description']!,
-                    author: recipe['author']!,
-                    time: recipe['time']!,
-                    profileImagePath: recipe['profileImagePath']!,
-                    isBookmarked: bookmarkedRecipes.any(
-                      (r) => r['title'] == recipe['title'],
-                    ),
-                    onBookmarkTap: () => _toggleBookmark(recipe),
-                    recipeData: recipe, // Pass the whole recipe map
+                      // Cek apakah resep ini sudah dibookmark oleh pengguna saat ini
+                      final bool isBookmarked = _bookmarkedRecipeIds.contains(documentId);
+
+                      return FutureBuilder<DocumentSnapshot>(
+                        future:
+                            FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(userUid)
+                                .get(),
+                        builder: (context, userSnapshot) {
+                          String authorName = 'Anonim';
+                          String profilePicturePath =
+                              'assets/images/profilemale.jpeg';
+
+                          if (userSnapshot.connectionState ==
+                                  ConnectionState.done &&
+                              userSnapshot.hasData &&
+                              userSnapshot.data!.exists) {
+                            final Map<String, dynamic> userData =
+                                userSnapshot.data!.data()
+                                    as Map<String, dynamic>;
+                            authorName = userData['nama'] ?? 'Anonim';
+                            profilePicturePath =
+                                userData['profile_image_url'] ??
+                                'assets/images/profilemale.jpeg';
+                          }
+
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => DetailResepPage(
+                                          documentId: documentId,
+                                        ),
+                                ),
+                              );
+                            },
+                            child: _buildRecipeCard(
+                              imagePath:
+                                  recipeData['image_url'] ??
+                                  'assets/images/default.png',
+                              rating: (recipeData['rating'] ?? 0).toString(),
+                              title: recipeData['nama'] ?? 'Tanpa Judul',
+                              description: recipeData['deskripsi'] ?? '',
+                              author: authorName,
+                              time: recipeData['waktu_masak'] ?? 'N/A',
+                              profileImagePath: profilePicturePath,
+                              isBookmarked: isBookmarked, // Pass the bookmark status
+                              onBookmarkTap:
+                                  () => _toggleBookmark(documentId, recipeData), // Use toggle function
+                            ),
+                          );
+                        },
+                      );
+                    },
                   );
                 },
               ),
@@ -364,45 +535,10 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
-      bottomNavigationBar: CustomNavbar(
-        currentIndex: 0,
-        onTap: (index) {
-          // Navigate to different pages
-          switch (index) {
-            case 0:
-              // Home - already here
-              break;
-            case 1:
-              // Nutrisi
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const NutrisiPage()),
-              );
-              break;
-            case 2:
-              // Resepku
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const ResepkuPage()),
-              );
-              break;
-            case 3:
-              // Bookmark
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const BookmarkPage()),
-              );
-              break;
-            case 4:
-              // Profil - belum ada halaman, skip
-              break;
-          }
-        },
-      ),
     );
   }
 
-  // Untuk membuat satu item di carousel
+  // Helper widget untuk banner (tidak berubah)
   Widget _buildBannerCard({
     required String image,
     required String tag,
@@ -421,30 +557,22 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      // Gunakan ClipRRect untuk memastikan semua anak (gambar & gradasi)
-      // ikut terpotong sesuai bentuk rounded corner.
       child: ClipRRect(
         borderRadius: BorderRadius.circular(10.0),
         child: Stack(
-          fit: StackFit.expand, // Agar semua anak Stack mengisi ruang
+          fit: StackFit.expand,
           children: [
-            // LAPISAN 1: GAMBAR (paling bawah)
             Image.asset(image, fit: BoxFit.cover),
-
-            // LAPISAN 2: GRADASI BAYANGAN (di tengah)
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  stops: [0.4, 1.0], // Bayangan baru mulai dari 40% atas
+                  stops: [0.4, 1.0],
                 ),
               ),
             ),
-            // ==========================================================
-
-            // LAPISAN 3: TAG (paling atas)
             Positioned(
               top: 10.0,
               left: 10.0,
@@ -464,8 +592,6 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-
-            // LAPISAN 4: JUDUL (paling atas)
             Positioned(
               bottom: 10.0,
               right: 10.0,
@@ -475,8 +601,6 @@ class _HomePageState extends State<HomePage> {
                   color: Colors.white,
                   fontSize: 20.0,
                   fontWeight: FontWeight.bold,
-                  // Shadow pada teks bisa dipertahankan atau dihapus
-                  // karena sudah dibantu oleh gradasi background.
                   shadows: [
                     Shadow(
                       blurRadius: 10.0,
@@ -493,6 +617,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Helper widget untuk kartu resep (dari versi server, lebih canggih)
   Widget _buildRecipeCard({
     required String imagePath,
     required String rating,
@@ -501,170 +626,194 @@ class _HomePageState extends State<HomePage> {
     required String author,
     required String time,
     required String profileImagePath,
-    required bool isBookmarked,
+    required bool isBookmarked, // NEW: Parameter untuk status bookmark
     required VoidCallback onBookmarkTap,
-    required Map<String, String> recipeData,
   }) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DetailResepPage(recipe: recipeData),
+    final bool isNetworkImage = imagePath.startsWith('http');
+    final bool isLocalFileImage =
+        imagePath.startsWith('/data/user/') ||
+        imagePath.startsWith('/storage/emulated/') ||
+        imagePath.startsWith('file:///');
+
+    return Container(
+      width: 180,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 2,
+            blurRadius: 5,
+            offset: const Offset(0, 3),
           ),
-        );
-      },
-      child: Container(
-        width: 180,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10.0),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
-              spreadRadius: 2,
-              blurRadius: 5,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-
-        // Langsung ke kontennya
-        child: Column(
-          mainAxisSize:
-              MainAxisSize.min, // Membuat tinggi kartu pas dengan kontennya
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Bagian Gambar (Tidak berubah)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 0),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      spreadRadius: 1,
-                      blurRadius: 8,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10.0),
-                  child: Image.asset(
-                    imagePath,
-                    height: 90.0,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
-
-            // Konten Teks
-            Padding(
-              padding: const EdgeInsets.all(
-                12.0,
-              ), // Beri padding seragam di sekeliling konten teks
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.star,
-                            color: Color(0xFF662B0E),
-                            size: 14.0,
-                          ),
-                          SizedBox(width: 3.0),
-                          Text(
-                            rating,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF662B0E),
-                              fontSize: 13.0,
-                            ),
-                          ),
-                        ],
-                      ),
-                      GestureDetector(
-                        onTap: onBookmarkTap,
-                        child: Icon(
-                          isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                          color: Color(0xFF662B0E),
-                          size: 18.0,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8.0),
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14.0,
-                      color: Color(0xFF662B0E),
-                    ),
-                  ),
-                  SizedBox(height: 4.0),
-                  Text(
-                    description,
-                    style: TextStyle(fontSize: 10.0, color: Color(0xFF662B0E)),
-                    textAlign: TextAlign.justify,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  // Ganti Spacer() kembali menjadi SizedBox untuk jarak yang pasti
-                  SizedBox(height: 14.0),
-
-                  // Baris Avatar dan Waktu
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 9.0,
-                        backgroundImage: AssetImage(profileImagePath),
-                      ),
-                      SizedBox(width: 4.0),
-                      Text(
-                        author,
-                        style: TextStyle(
-                          fontSize: 10.0,
-                          color: Color(0xFF662B0E),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Spacer(),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 6.0,
-                          vertical: 3.0,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Color.fromRGBO(250, 228, 194, 1),
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        child: Text(
-                          time,
-                          style: TextStyle(
-                            color: Color(0xFF662B0E),
-                            fontSize: 8.0,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 0),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    spreadRadius: 1,
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10.0),
+                child:
+                    isNetworkImage
+                        ? Image.network(
+                            imagePath,
+                            height: 90.0,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (c, e, s) => Image.asset(
+                                  'assets/images/default.png',
+                                  height: 90.0,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                ),
+                          )
+                        : isLocalFileImage
+                            ? Image.file(
+                                File(imagePath),
+                                height: 90.0,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder:
+                                    (c, e, s) => Image.asset(
+                                      'assets/images/default.png',
+                                      height: 90.0,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ),
+                              )
+                            : Image.asset(
+                                imagePath,
+                                height: 90.0,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder:
+                                    (c, e, s) => Image.asset(
+                                      'assets/images/default.png',
+                                      height: 90.0,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ),
+                              ),
+              ),
             ),
-          ],
-        ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.star,
+                          color: Color(0xFF662B0E),
+                          size: 14.0,
+                        ),
+                        const SizedBox(width: 3.0),
+                        Text(
+                          rating,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF662B0E),
+                            fontSize: 13.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                    GestureDetector(
+                      onTap: onBookmarkTap,
+                      child: Icon(
+                        isBookmarked ? Icons.bookmark : Icons.bookmark_border, // CHANGE: Icon based on isBookmarked
+                        color: const Color(0xFF662B0E),
+                        size: 18.0,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8.0),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14.0,
+                    color: Color(0xFF662B0E),
+                  ),
+                ),
+                const SizedBox(height: 4.0),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    fontSize: 10.0,
+                    color: Color(0xFF662B0E),
+                  ),
+                  textAlign: TextAlign.justify,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 14.0),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 9.0,
+                      backgroundImage:
+                          profileImagePath.startsWith('http')
+                              ? NetworkImage(profileImagePath) as ImageProvider
+                              : AssetImage(profileImagePath),
+                    ),
+                    const SizedBox(width: 4.0),
+                    Text(
+                      author,
+                      style: const TextStyle(
+                        fontSize: 10.0,
+                        color: Color(0xFF662B0E),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6.0,
+                        vertical: 3.0,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color.fromRGBO(250, 228, 194, 1),
+                        borderRadius: BorderRadius.circular(5.0),
+                      ),
+                      child: Text(
+                        time,
+                        style: const TextStyle(
+                          color: Color(0xFF662B0E),
+                          fontSize: 8.0,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
