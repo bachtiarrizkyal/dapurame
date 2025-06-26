@@ -1,11 +1,12 @@
-// lib/resepku.dart
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:dapurame/tambah_resep.dart';
 import 'package:dapurame/detail_resep.dart';
+import 'package:dapurame/nutrisi.dart';
+import 'package:dapurame/bookmark.dart';
+import 'package:dapurame/home_page.dart';
 
 class ResepkuPage extends StatefulWidget {
   const ResepkuPage({super.key});
@@ -22,7 +23,6 @@ class _ResepkuPageState extends State<ResepkuPage> {
   void initState() {
     super.initState();
     _currentUser = FirebaseAuth.instance.currentUser;
-    // Listener untuk auth state, agar UI update saat user login/logout
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
       if (mounted) {
         setState(() {
@@ -32,7 +32,6 @@ class _ResepkuPageState extends State<ResepkuPage> {
     });
   }
 
-  // Method untuk menghapus resep
   Future<void> _deleteRecipe(String documentId, String recipeName) async {
     try {
       await _firestore.collection('resep').doc(documentId).delete();
@@ -56,7 +55,6 @@ class _ResepkuPageState extends State<ResepkuPage> {
     }
   }
 
-  // Helper widget untuk AppBar agar tidak duplikasi kode
   PreferredSizeWidget _buildAppBar() {
     return PreferredSize(
       preferredSize: const Size.fromHeight(60),
@@ -101,7 +99,7 @@ class _ResepkuPageState extends State<ResepkuPage> {
                   style: TextStyle(
                     color: Color(0xFF4A2104),
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w500,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -115,7 +113,7 @@ class _ResepkuPageState extends State<ResepkuPage> {
             ),
           ),
         ),
-        // --- PERBAIKAN: Hapus Navbar dari sini ---
+        // --- HAPUS: bottomNavigationBar dari sini ---
       );
     }
 
@@ -208,14 +206,14 @@ class _ResepkuPageState extends State<ResepkuPage> {
                     DocumentSnapshot document = snapshot.data!.docs[index];
                     Map<String, dynamic> data =
                         document.data()! as Map<String, dynamic>;
+
+                    final String recipeNameForDelete =
+                        (data['nama'] ?? 'Tanpa Nama').toString();
+
                     return ResepCard(
                       documentId: document.id,
                       data: data,
-                      onDelete:
-                          () => _deleteRecipe(
-                            document.id,
-                            data['nama'] ?? 'Tanpa Nama',
-                          ),
+                      onDelete: (docId, name) => _deleteRecipe(docId, name),
                       onEdit: () {
                         Navigator.push(
                           context,
@@ -246,17 +244,16 @@ class _ResepkuPageState extends State<ResepkuPage> {
         backgroundColor: const Color(0xFF662B0E),
         child: const Icon(Icons.add, color: Colors.white, size: 32),
       ),
-      // --- PERBAIKAN: Hapus Navbar dari sini juga ---
+      // --- HAPUS: bottomNavigationBar dari sini juga ---
     );
   }
 }
 
-// --- ResepCard Disederhanakan untuk Kerapian ---
 class ResepCard extends StatelessWidget {
   final String documentId;
   final Map<String, dynamic> data;
   final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final Function(String documentId, String recipeName) onDelete;
 
   const ResepCard({
     super.key,
@@ -266,9 +263,109 @@ class ResepCard extends StatelessWidget {
     required this.onDelete,
   });
 
+  void _showDeleteDialog(BuildContext context, String recipeName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: const Icon(Icons.close, color: Color(0xFF4A2104)),
+                  ),
+                ),
+                const Icon(Icons.delete, size: 120, color: Color(0xFFE68B2B)),
+                const SizedBox(height: 12),
+                Text(
+                  'Kamu yakin akan menghapus\nresep "$recipeName"?',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF4A2104),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    InkWell(
+                      borderRadius: BorderRadius.circular(50),
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.orange.withOpacity(0.1),
+                              spreadRadius: 1,
+                              blurRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.close,
+                          color: Color(0xFFE68B2B),
+                          size: 28,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      height: 28,
+                      width: 0.5,
+                      color: const Color(0xFFE68B2B),
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(50),
+                      onTap: () {
+                        onDelete(
+                          documentId,
+                          recipeName,
+                        ); // Gunakan parameter dari ResepCard
+                        Navigator.of(context).pop();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.orange.withOpacity(0.1),
+                              spreadRadius: 1,
+                              blurRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.check,
+                          color: Color(0xFFE68B2B),
+                          size: 28,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Ambil data dengan aman
     final String nama = data['nama'] ?? 'Tanpa Nama';
     final String deskripsi = data['deskripsi'] ?? 'Tanpa Deskripsi';
     final String imagePath = data['image_url'] ?? 'assets/images/default.png';
@@ -366,56 +463,39 @@ class ResepCard extends StatelessWidget {
             ),
           ],
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(
-                Icons.edit_outlined,
-                color: Color(0xFFE68B2B),
-                size: 20,
+        trailing: SizedBox(
+          width: 60,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon Edit
+              GestureDetector(
+                onTap: onEdit,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  child: const Icon(
+                    Icons.edit,
+                    color: Color(0xFFE68B2B),
+                    size: 24,
+                  ),
+                ),
               ),
-              onPressed: onEdit,
-            ),
-            IconButton(
-              icon: const Icon(
-                Icons.delete_outline,
-                color: Colors.redAccent,
-                size: 20,
+              // Icon Delete
+              GestureDetector(
+                onTap: () => _showDeleteDialog(context, nama),
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  child: const Icon(
+                    Icons.delete,
+                    color: Color(0xFFE68B2B),
+                    size: 25,
+                  ),
+                ),
               ),
-              onPressed: () => _showDeleteDialog(context, nama),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    );
-  }
-
-  void _showDeleteDialog(BuildContext context, String recipeName) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text('Hapus Resep'),
-          content: Text('Anda yakin akan menghapus resep "$recipeName"?'),
-          actions: [
-            TextButton(
-              child: const Text('Batal'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            TextButton(
-              child: const Text('Hapus', style: TextStyle(color: Colors.red)),
-              onPressed: () {
-                onDelete();
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
     );
   }
 }

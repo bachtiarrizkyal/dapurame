@@ -85,6 +85,8 @@ class _HomePageContentState extends State<HomePageContent> {
   int _currentPageIndex = 0;
   final PageController _pageController = PageController();
   String _greetingName = 'Pengguna'; // Default nama
+  User? _currentUser; // Tambahkan ini untuk melacak pengguna saat ini
+  Set<String> _bookmarkedRecipeIds = {}; // Set untuk menyimpan ID resep yang dibookmark
 
   final List<Map<String, String>> bannerItems = [
     {
@@ -107,7 +109,28 @@ class _HomePageContentState extends State<HomePageContent> {
   @override
   void initState() {
     super.initState();
-    _fetchUserData();
+    _currentUser = FirebaseAuth.instance.currentUser;
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (mounted) {
+        setState(() {
+          _currentUser = user;
+        });
+        if (user != null) {
+          _fetchUserData();
+          _fetchUserBookmarks();
+        } else {
+          // Clear bookmarks if user logs out
+          setState(() {
+            _greetingName = 'Pengguna';
+            _bookmarkedRecipeIds.clear();
+          });
+        }
+      }
+    });
+    if (_currentUser != null) {
+      _fetchUserData();
+      _fetchUserBookmarks();
+    }
   }
 
   @override
@@ -118,30 +141,52 @@ class _HomePageContentState extends State<HomePageContent> {
 
   // Fungsi untuk mengambil nama pengguna dari Firestore
   Future<void> _fetchUserData() async {
-    User? currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser != null) {
+    if (_currentUser != null) {
       DocumentSnapshot userDoc =
           await FirebaseFirestore.instance
               .collection('users')
-              .doc(currentUser.uid)
+              .doc(_currentUser!.uid)
               .get();
       if (userDoc.exists && mounted) {
         setState(() {
-          // --- PERUBAHAN DI SINI ---
-          // Mengambil 'username' untuk sapaan, bukan 'nama'
           _greetingName = userDoc.get('username') ?? 'Pengguna';
         });
       }
     }
   }
 
-  // Fungsi untuk mem-bookmark resep
-  Future<void> _bookmarkRecipe(
+  // Fungsi untuk mengambil ID resep yang dibookmark oleh pengguna
+  Future<void> _fetchUserBookmarks() async {
+    if (_currentUser == null) {
+      setState(() {
+        _bookmarkedRecipeIds.clear();
+      });
+      return;
+    }
+    try {
+      QuerySnapshot bookmarkSnapshot = await FirebaseFirestore.instance
+          .collection('bookmark')
+          .where('bookmarked_by_user_id', isEqualTo: _currentUser!.uid)
+          .get();
+
+      if (mounted) {
+        setState(() {
+          _bookmarkedRecipeIds = bookmarkSnapshot.docs
+              .map((doc) => doc.get('original_recipe_id') as String)
+              .toSet();
+        });
+      }
+    } catch (e) {
+      print("Error fetching user bookmarks: $e");
+    }
+  }
+
+  // Fungsi untuk mem-bookmark atau unbookmark resep
+  Future<void> _toggleBookmark(
     String recipeDocumentId,
     Map<String, dynamic> recipeData,
   ) async {
-    User? currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) {
+    if (_currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Anda harus login untuk membookmark resep.'),
@@ -150,29 +195,46 @@ class _HomePageContentState extends State<HomePageContent> {
       );
       return;
     }
-    try {
-      QuerySnapshot existingBookmarks =
-          await FirebaseFirestore.instance
-              .collection('bookmark')
-              .where('original_recipe_id', isEqualTo: recipeDocumentId)
-              .where('bookmarked_by_user_id', isEqualTo: currentUser.uid)
-              .get();
 
-      if (existingBookmarks.docs.isNotEmpty) {
+    try {
+      final isCurrentlyBookmarked = _bookmarkedRecipeIds.contains(recipeDocumentId);
+
+      if (isCurrentlyBookmarked) {
+        // Hapus bookmark
+        QuerySnapshot existingBookmarks = await FirebaseFirestore.instance
+            .collection('bookmark')
+            .where('original_recipe_id', isEqualTo: recipeDocumentId)
+            .where('bookmarked_by_user_id', isEqualTo: _currentUser!.uid)
+            .get();
+
+        for (DocumentSnapshot doc in existingBookmarks.docs) {
+          await doc.reference.delete();
+        }
+        if (mounted) {
+          setState(() {
+            _bookmarkedRecipeIds.remove(recipeDocumentId);
+          });
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Resep ini sudah ada di bookmark Anda!'),
-            backgroundColor: Colors.orange,
+            content: Text('Resep berhasil dihapus dari bookmark!'),
+            backgroundColor: Colors.green,
           ),
         );
       } else {
+        // Tambah bookmark
         Map<String, dynamic> bookmarkData = Map.from(recipeData);
         bookmarkData['original_recipe_id'] = recipeDocumentId;
-        bookmarkData['bookmarked_by_user_id'] = currentUser.uid;
+        bookmarkData['bookmarked_by_user_id'] = _currentUser!.uid;
         bookmarkData['bookmarked_at'] = FieldValue.serverTimestamp();
         await FirebaseFirestore.instance
             .collection('bookmark')
             .add(bookmarkData);
+        if (mounted) {
+          setState(() {
+            _bookmarkedRecipeIds.add(recipeDocumentId);
+          });
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Resep berhasil ditambahkan ke bookmark!'),
@@ -183,7 +245,7 @@ class _HomePageContentState extends State<HomePageContent> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal menambahkan resep ke bookmark: $e'),
+          content: Text('Gagal mengubah status bookmark: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -388,6 +450,9 @@ class _HomePageContentState extends State<HomePageContent> {
                       final String documentId = recipeDoc.id;
                       final String userUid = recipeData['user_id'] ?? '';
 
+                      // Cek apakah resep ini sudah dibookmark oleh pengguna saat ini
+                      final bool isBookmarked = _bookmarkedRecipeIds.contains(documentId);
+
                       return FutureBuilder<DocumentSnapshot>(
                         future:
                             FirebaseFirestore.instance
@@ -419,8 +484,8 @@ class _HomePageContentState extends State<HomePageContent> {
                                 MaterialPageRoute(
                                   builder:
                                       (context) => DetailResepPage(
-                                        documentId: documentId,
-                                      ),
+                                          documentId: documentId,
+                                        ),
                                 ),
                               );
                             },
@@ -434,8 +499,9 @@ class _HomePageContentState extends State<HomePageContent> {
                               author: authorName,
                               time: recipeData['waktu_masak'] ?? 'N/A',
                               profileImagePath: profilePicturePath,
+                              isBookmarked: isBookmarked, // Pass the bookmark status
                               onBookmarkTap:
-                                  () => _bookmarkRecipe(documentId, recipeData),
+                                  () => _toggleBookmark(documentId, recipeData), // Use toggle function
                             ),
                           );
                         },
@@ -539,6 +605,7 @@ class _HomePageContentState extends State<HomePageContent> {
     required String author,
     required String time,
     required String profileImagePath,
+    required bool isBookmarked, // NEW: Parameter untuk status bookmark
     required VoidCallback onBookmarkTap,
   }) {
     final bool isNetworkImage = imagePath.startsWith('http');
@@ -584,45 +651,45 @@ class _HomePageContentState extends State<HomePageContent> {
                 child:
                     isNetworkImage
                         ? Image.network(
-                          imagePath,
-                          height: 90.0,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder:
-                              (c, e, s) => Image.asset(
-                                'assets/images/default.png',
-                                height: 90.0,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                              ),
-                        )
+                            imagePath,
+                            height: 90.0,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (c, e, s) => Image.asset(
+                                  'assets/images/default.png',
+                                  height: 90.0,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                ),
+                          )
                         : isLocalFileImage
-                        ? Image.file(
-                          File(imagePath),
-                          height: 90.0,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder:
-                              (c, e, s) => Image.asset(
-                                'assets/images/default.png',
+                            ? Image.file(
+                                File(imagePath),
                                 height: 90.0,
                                 width: double.infinity,
                                 fit: BoxFit.cover,
-                              ),
-                        )
-                        : Image.asset(
-                          imagePath,
-                          height: 90.0,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder:
-                              (c, e, s) => Image.asset(
-                                'assets/images/default.png',
+                                errorBuilder:
+                                    (c, e, s) => Image.asset(
+                                      'assets/images/default.png',
+                                      height: 90.0,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ),
+                              )
+                            : Image.asset(
+                                imagePath,
                                 height: 90.0,
                                 width: double.infinity,
                                 fit: BoxFit.cover,
+                                errorBuilder:
+                                    (c, e, s) => Image.asset(
+                                      'assets/images/default.png',
+                                      height: 90.0,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ),
                               ),
-                        ),
               ),
             ),
           ),
@@ -654,9 +721,9 @@ class _HomePageContentState extends State<HomePageContent> {
                     ),
                     GestureDetector(
                       onTap: onBookmarkTap,
-                      child: const Icon(
-                        Icons.bookmark_border,
-                        color: Color(0xFF662B0E),
+                      child: Icon(
+                        isBookmarked ? Icons.bookmark : Icons.bookmark_border, // CHANGE: Icon based on isBookmarked
+                        color: const Color(0xFF662B0E),
                         size: 18.0,
                       ),
                     ),
