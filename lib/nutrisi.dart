@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'navbar.dart';
-import 'nutrisi_detail.dart';
-import 'resepku.dart';
-import 'bookmark.dart';
-import 'home_page.dart';
+import 'package:dapurame/nutrisi_detail.dart';
 
 class NutrisiPage extends StatefulWidget {
   const NutrisiPage({super.key});
@@ -26,64 +22,48 @@ class _NutrisiPageState extends State<NutrisiPage> {
     _loadNutrisiData();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadNutrisiData() async {
-    setState(() {
-      _isLoading = true;
-    });
+    if (!_isLoading) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     try {
-      print('🔍 Loading nutrisi data from Firestore...');
-
-      // Load data from Firestore collection 'nutrisi'
       QuerySnapshot querySnapshot =
           await FirebaseFirestore.instance.collection('nutrisi').get();
 
       List<Map<String, dynamic>> loadedData = [];
-
+      int counter = 1;
       for (var doc in querySnapshot.docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        // Add document ID as kode if not present
         data['kode'] = data['kode'] ?? doc.id;
-        data['no'] = loadedData.length + 1; // Generate number
-
-        // Debug individual documents
-        print(
-          '📄 Document ${doc.id}: ${data['nama']} - ${data['energi']} kkal',
-        );
-
+        data['no'] = counter++;
         loadedData.add(data);
       }
 
-      print(
-        '✅ Successfully loaded ${loadedData.length} nutrisi items from Firestore',
-      );
-
-      // Check if data is actually loaded
-      if (loadedData.isEmpty) {
-        print('⚠️ No data found in Firestore collection "nutrisi"');
-      }
-
-      setState(() {
-        _allBahan = loadedData;
-        _filteredBahan = List.from(_allBahan);
-        _isLoading = false;
-      });
-    } catch (e) {
-      print('❌ ERROR loading nutrisi data from Firestore: $e');
-
-      setState(() {
-        _allBahan = [];
-        _filteredBahan = [];
-        _isLoading = false;
-      });
-
-      // Show error to user
       if (mounted) {
+        setState(() {
+          _allBahan = loadedData;
+          _filteredBahan = List.from(_allBahan);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gagal memuat data nutrisi: $e'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
           ),
         );
       }
@@ -121,6 +101,7 @@ class _NutrisiPageState extends State<NutrisiPage> {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60),
         child: AppBar(
+          automaticallyImplyLeading: false,
           backgroundColor: const Color(0xFF662B0E),
           centerTitle: true,
           elevation: 0,
@@ -138,7 +119,7 @@ class _NutrisiPageState extends State<NutrisiPage> {
         children: [
           // Info Box
           Container(
-            margin: const EdgeInsets.all(16),
+            margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: const Color(0xFFE68B2B).withOpacity(0.1),
@@ -148,7 +129,7 @@ class _NutrisiPageState extends State<NutrisiPage> {
               ),
             ),
             child: const Text(
-              'Data kandungan nutrisi makanan berikut berdasarkan Tabel Komposisi Pangan Indonesia (TKPI) 2018 oleh Kementerian Kesehatan RI per 100 gram BDD (Bagian yang dapat dimakan).',
+              'Data kandungan nutrisi makanan berikut berdasarkan Tabel Komposisi Pangan Indonesia (TKPI) 2018 per 100 gram BDD (Bagian yang dapat dimakan).',
               style: TextStyle(
                 fontSize: 12,
                 color: Color(0xFF4A2104),
@@ -159,7 +140,7 @@ class _NutrisiPageState extends State<NutrisiPage> {
 
           // Search Bar
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
@@ -183,8 +164,6 @@ class _NutrisiPageState extends State<NutrisiPage> {
               ),
             ),
           ),
-
-          const SizedBox(height: 16),
 
           // Header Table
           Container(
@@ -255,7 +234,7 @@ class _NutrisiPageState extends State<NutrisiPage> {
                       ),
                     )
                     : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                       itemCount: _filteredBahan.length,
                       itemBuilder: (context, index) {
                         final bahan = _filteredBahan[index];
@@ -263,8 +242,6 @@ class _NutrisiPageState extends State<NutrisiPage> {
                           no: bahan['no'],
                           nama: bahan['nama']?.toString() ?? 'Unknown',
                           kelompok: bahan['kelompok']?.toString() ?? 'Lainnya',
-                          energi: bahan['energi']?.toString() ?? '0',
-                          protein: bahan['protein']?.toString() ?? '0',
                           onTap: () => _navigateToDetail(bahan),
                         );
                       },
@@ -272,48 +249,8 @@ class _NutrisiPageState extends State<NutrisiPage> {
           ),
         ],
       ),
-      bottomNavigationBar: CustomNavbar(
-        currentIndex: 1,
-        onTap: (index) {
-          // Navigate to different pages
-          switch (index) {
-            case 0:
-              // Home
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const HomePage()),
-              );
-              break;
-            case 1:
-              // Nutrisi - already here
-              break;
-            case 2:
-              // Resepku
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const ResepkuPage()),
-              );
-              break;
-            case 3:
-              // Bookmark
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const BookmarkPage()),
-              );
-              break;
-            case 4:
-              // Profil - belum ada halaman, skip
-              break;
-          }
-        },
-      ),
+      // --- PERBAIKAN: HAPUS NAVBAR DARI SINI ---
     );
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 }
 
@@ -321,8 +258,6 @@ class NutrisiCard extends StatelessWidget {
   final int no;
   final String nama;
   final String kelompok;
-  final String energi;
-  final String protein;
   final VoidCallback onTap;
 
   const NutrisiCard({
@@ -330,8 +265,6 @@ class NutrisiCard extends StatelessWidget {
     required this.no,
     required this.nama,
     required this.kelompok,
-    required this.energi,
-    required this.protein,
     required this.onTap,
   });
 
@@ -360,6 +293,7 @@ class NutrisiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
+      color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       elevation: 1,
       child: ListTile(
@@ -370,7 +304,7 @@ class NutrisiCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: _getKelompokColor(kelompok).withOpacity(0.1),
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: _getKelompokColor(kelompok), width: 1),
+            border: Border.all(color: _getKelompokColor(kelompok), width: 1.5),
           ),
           child: Center(
             child: Text(
@@ -391,22 +325,13 @@ class NutrisiCard extends StatelessWidget {
             color: Color(0xFF4A2104),
           ),
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              kelompok,
-              style: TextStyle(
-                fontSize: 11,
-                color: _getKelompokColor(kelompok),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            Text(
-              'Energi: $energi kkal • Protein: ${protein}g',
-              style: const TextStyle(fontSize: 10, color: Color(0xFF4A2104)),
-            ),
-          ],
+        subtitle: Text(
+          kelompok,
+          style: TextStyle(
+            fontSize: 11,
+            color: _getKelompokColor(kelompok),
+            fontWeight: FontWeight.w500,
+          ),
         ),
         trailing: const Icon(
           Icons.arrow_forward_ios,
