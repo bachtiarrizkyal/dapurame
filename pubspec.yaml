@@ -4,36 +4,41 @@ publish_to: "none"
 version: 0.1.0
 
 environment:
-  sdk: ^3.7.2
+  sdk: ">=3.4.3 <4.0.0" # Menggunakan rentang versi SDK yang lebih modern
 
 dependencies:
   flutter:
     sdk: flutter
 
-  # Firebase dependencies (versi yang kompatibel dengan minSdk 21)
-  firebase_core: 2.30.1
-  firebase_auth: 4.19.3
-  cloud_firestore: 4.17.0
-  firebase_storage: ^11.6.0
+  # Firebase dependencies (versi yang kompatibel dan stabil)
+  firebase_core: ^2.30.1
+  firebase_auth: ^4.19.3
+  cloud_firestore: ^4.17.0
+  firebase_storage: ^11.7.4 # Menggunakan versi yang lebih update
 
   # Image picker untuk upload foto
-  image_picker: ^1.0.7
+  image_picker: ^1.1.2 # Menggunakan versi yang lebih update
 
   # Permission handler
-  permission_handler: ^11.0.1
+  permission_handler: ^11.3.1 # Menggunakan versi yang lebih update
 
-  #Shared preference
-  shared_preferences: ^2.2.0
+  # Shared preference
+  shared_preferences: ^2.2.3 # Menggunakan versi yang lebih update
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+
+  # --- 1. TAMBAHKAN PACKAGE DI SINI ---
+  flutter_launcher_icons: ^0.13.1
+
+  flutter_lints: ^4.0.0 # Menggunakan versi yang lebih update
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/icon/ # <-- TAMBAHKAN FOLDER IKON ANDA DI SINI
   fonts:
     - family: Poppins
       fonts:
@@ -49,3 +54,12 @@ flutter:
           weight: 600
         - asset: assets/fonts/Poppins-Bold.ttf
           weight: 700
+
+# --- 2. TAMBAHKAN BLOK KONFIGURASI INI DI PALING BAWAH ---
+# Pastikan blok ini tidak menjorok (sejajar dengan 'flutter:' dan 'name:')
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  # Ganti dengan path logo Anda. Idealnya ukuran 1024x1024.
+  image_path: "assets/icon/logo.png"
+  min_sdk_android: 21 # Sesuaikan dengan minSdk proyek Anda
