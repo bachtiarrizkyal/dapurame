@@ -106,6 +106,26 @@ class _HomePageContentState extends State<HomePageContent> {
     },
   ];
 
+<<<<<<< HEAD
+  void _toggleBookmark(Map<String, String> recipe) {
+    setState(() {
+      if (bookmarkedRecipes.any((r) => r['title'] == recipe['title'])) {
+        bookmarkedRecipes.removeWhere((r) => r['title'] == recipe['title']);
+        // Notifikasi saat dihapus dari bookmark
+        NotificationPage.showNotification(
+          title: 'Bookmark Dihapus',
+          body: 'Resep "${recipe['title']}" telah dihapus dari bookmark Anda.',
+          payload: 'removed_bookmark_${recipe['title']}',
+        );
+      } else {
+        bookmarkedRecipes.add(recipe);
+        // Notifikasi saat ditambahkan ke bookmark
+        NotificationPage.showNotification(
+          title: 'Resep Disimpan!',
+          body: 'Resep "${recipe['title']}" telah ditambahkan ke bookmark Anda.',
+          payload: 'added_bookmark_${recipe['title']}',
+        );
+=======
   @override
   void initState() {
     super.initState();
@@ -125,6 +145,7 @@ class _HomePageContentState extends State<HomePageContent> {
             _bookmarkedRecipeIds.clear();
           });
         }
+>>>>>>> dffb79249dde4ab5f1342fcdb3902a61f085c54f
       }
     });
     if (_currentUser != null) {

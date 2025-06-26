@@ -1,8 +1,56 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/services.dart';
 
-// Halaman Notifikasi (Sama seperti kode sebelumnya, hanya dipindahkan ke file ini)
+// Inisialisasi plugin notifikasi di scope global
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+// =========================================================================
+// Fungsi top-level untuk menangani notifikasi background
+// HARUS DITANDAI DENGAN @pragma('vm:entry-point')
+@pragma('vm:entry-point')
+void notificationTapBackground(NotificationResponse notificationResponse) {
+  debugPrint('Background Notification tapped from top-level function: ${notificationResponse.payload}');
+  // Ini adalah tempat Anda akan menangani aksi saat notifikasi ditekan
+  // ketika aplikasi di background atau ditutup.
+  // Contoh: Navigasi ke halaman tertentu
+  // Navigator.push(context, MaterialPageRoute(builder: (context) => SomePage(payload: notificationResponse.payload)));
+  // Perlu diingat, mengakses context di sini lebih kompleks karena ini fungsi top-level.
+  // Untuk navigasi kompleks dari background, pertimbangkan untuk menggunakan package seperti go_router
+  // atau mengirim data melalui Isolate/Port. Untuk tujuan debugging sederhana, debugPrint cukup.
+}
+// =========================================================================
+
+
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
+
+  static Future<void> showNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'dapurame_channel_id', // ID unik channel notifikasi
+      'Notifikasi DapuRame', // Nama channel yang terlihat oleh pengguna
+      channelDescription: 'Notifikasi terkait aktivitas DapuRame Anda', // Deskripsi channel
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: false,
+    );
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+    );
+    await flutterLocalNotificationsPlugin.show(
+      0, // ID notifikasi (bisa diubah untuk notifikasi berbeda)
+      title,
+      body,
+      platformChannelSpecifics,
+      payload: payload,
+    );
+  }
 
   @override
   State<NotificationPage> createState() => _NotificationPageState();
@@ -16,6 +64,44 @@ class _NotificationPageState extends State<NotificationPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _initializeNotifications(); // Panggil fungsi inisialisasi
+  }
+
+  // Fungsi untuk menginisialisasi notifikasi dan meminta izin (hanya Android)
+  Future<void> _initializeNotifications() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    final InitializationSettings initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+    );
+
+    await flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse:
+          (NotificationResponse notificationResponse) async {
+        // Callback ini dipicu saat notifikasi ditekan ketika aplikasi sedang aktif (foreground)
+        debugPrint('Foreground Notification tapped: ${notificationResponse.payload}');
+      },
+      // === UBAH BAGIAN INI ===
+      onDidReceiveBackgroundNotificationResponse: notificationTapBackground, // Panggil fungsi top-level di sini
+      // =======================
+    );
+
+    _requestPermissions();
+  }
+
+  Future<void> _requestPermissions() async {
+    final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+        flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    final bool? granted = await androidImplementation?.requestNotificationsPermission();
+    if (granted == true) {
+      debugPrint('Izin notifikasi Android diberikan.');
+    } else {
+      debugPrint('Izin notifikasi Android ditolak.');
+    }
   }
 
   @override
@@ -30,21 +116,18 @@ class _NotificationPageState extends State<NotificationPage>
       backgroundColor: Color(0xFFFFFAF2),
       appBar: AppBar(
         backgroundColor: Color(0xFF662B0E),
-         iconTheme: const IconThemeData(
-          color: Colors.white, // Ini akan mengubah warna tombol back
+        iconTheme: const IconThemeData(
+          color: Colors.white,
         ),
-
         titleTextStyle: const TextStyle(
-          color: Colors.white, // Ini akan mengubah warna tulisan "Notifikasi"
+          color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
           fontFamily: 'Poppins',
         ),
-        
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            // Ini akan menutup halaman saat ini dan kembali ke halaman sebelumnya (HomePage)
             Navigator.pop(context);
           },
         ),
@@ -69,11 +152,20 @@ class _NotificationPageState extends State<NotificationPage>
           const Center(child: Text('Tidak ada notifikasi resep.')),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          NotificationPage.showNotification(
+            title: 'Notifikasi Tes DapuRame',
+            body: 'Ini adalah notifikasi tes dari aplikasi DapuRame!',
+          );
+        },
+        label: const Text('Kirim Notifikasi Tes', style: TextStyle(color: Colors.white)),
+        icon: const Icon(Icons.notifications_active, color: Colors.white),
+        backgroundColor: Color(0xFF8B4513),
+      ),
     );
   }
 
-  // ... (Salin semua method helper _buildGeneralNotifications dan _buildNotificationTile ke sini)
-  // Method helper _buildGeneralNotifications
   Widget _buildGeneralNotifications() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -168,7 +260,6 @@ class _NotificationPageState extends State<NotificationPage>
     );
   }
 
-  // Method helper _buildNotificationTile
   Widget _buildNotificationTile({
     required Widget avatar,
     required Widget message,

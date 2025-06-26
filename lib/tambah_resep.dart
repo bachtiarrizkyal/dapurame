@@ -3,8 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
+<<<<<<< HEAD
+import 'search_bahan.dart';
+import 'notification_page.dart';
+=======
 import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
 import 'search_bahan.dart'; // Asumsi file ini ada di proyek Anda
+>>>>>>> dffb79249dde4ab5f1342fcdb3902a61f085c54f
 
 class TambahResepPage extends StatefulWidget {
   final String? documentId;
@@ -382,6 +387,12 @@ class _TambahResepPageState extends State<TambahResepPage> {
             content: Text('✅ Resep berhasil disimpan!'),
             backgroundColor: Colors.green,
           ),
+        );
+        // PUSH NOTIFICATION SETELAH RESEP BARU DISIMPAN
+        NotificationPage.showNotification(
+          title: 'Resep Baru Ditambahkan!',
+          body: 'Resep "${_namaController.text}" Anda telah berhasil diunggah.',
+          payload: 'new_recipe_${_namaController.text}',
         );
       }
 
