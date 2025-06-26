@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Penting: Import Firebase Auth
 import 'package:dapurame/nutrisi.dart';
 import 'package:dapurame/resepku.dart';
 import 'package:dapurame/bookmark.dart';
 import 'package:dapurame/detail_resep.dart';
 import 'navbar.dart';
 import 'notification_page.dart';
-import 'dart:io';
+import 'dart:io'; // Diperlukan untuk Image.file
 
 void main() {
+  // Pastikan Firebase.initializeApp() sudah dipanggil di file main.dart utama Anda
+  // sebelum runApp(). Contoh:
+  // void main() async {
+  //   WidgetsFlutterBinding.ensureInitialized();
+  //   await Firebase.initializeApp();
+  //   runApp(MaterialApp(...));
+  // }
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(
     SystemUiOverlayStyle(
@@ -20,6 +28,7 @@ void main() {
   runApp(MaterialApp(debugShowCheckedModeBanner: false, home: HomePage()));
 }
 
+// Data untuk carousel banner
 final List<Map<String, String>> bannerItems = [
   {
     'image': 'assets/images/ramen.jpeg',
@@ -55,6 +64,69 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
+  // Method untuk membookmark resep ke koleksi 'bookmark'
+  Future<void> _bookmarkRecipe(String recipeDocumentId, Map<String, dynamic> recipeData) async {
+    User? currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Anda harus login untuk membookmark resep.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Buat salinan data resep dari dokumen resep asli
+    Map<String, dynamic> bookmarkData = Map.from(recipeData);
+
+    // Tambahkan/ubah field sesuai kebutuhan koleksi 'bookmark'
+    bookmarkData['original_recipe_id'] = recipeDocumentId; // Simpan ID resep asli
+    bookmarkData['bookmarked_by_user_id'] = currentUser.uid; // User yang sedang membookmark
+    bookmarkData['catatan'] = ''; // Field baru: catatan, default kosong
+    bookmarkData['bookmarked_at'] = FieldValue.serverTimestamp(); // Waktu bookmark
+
+    // Anda bisa menghapus field yang tidak relevan untuk bookmark jika ada
+    // Contoh: bookmarkData.remove('is_shared');
+
+    try {
+      // Cek apakah resep sudah dibookmark oleh user ini sebelumnya
+      QuerySnapshot existingBookmarks = await FirebaseFirestore.instance
+          .collection('bookmark')
+          .where('original_recipe_id', isEqualTo: recipeDocumentId)
+          .where('bookmarked_by_user_id', isEqualTo: currentUser.uid)
+          .get();
+
+      if (existingBookmarks.docs.isNotEmpty) {
+        // Jika sudah ada, berikan notifikasi
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Resep ini sudah ada di bookmark Anda!'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        // Jika belum ada, tambahkan ke koleksi 'bookmark'
+        await FirebaseFirestore.instance.collection('bookmark').add(bookmarkData);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Resep berhasil ditambahkan ke bookmark!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print("Error bookmarking recipe: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menambahkan resep ke bookmark: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,11 +137,12 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header dengan sapaan dan ikon notifikasi
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Halo, Wanda!',
+                    'Halo, Wanda!', // Anda bisa mengambil nama user dari Firebase Auth atau koleksi 'users' jika login
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
@@ -92,6 +165,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
+              // Tagline aplikasi
               Text.rich(
                 TextSpan(
                   children: [
@@ -123,6 +197,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               SizedBox(height: 16.0),
+              // Search Bar
               Row(
                 children: [
                   Expanded(
@@ -152,12 +227,15 @@ class _HomePageState extends State<HomePage> {
                     ),
                     child: IconButton(
                       icon: Icon(Icons.tune, color: Colors.white),
-                      onPressed: () {},
+                      onPressed: () {
+                        // Handle filter icon press
+                      },
                     ),
                   ),
                 ],
               ),
               SizedBox(height: 24.0),
+              // Carousel Banner Resep
               SizedBox(
                 height: 200.0,
                 child: PageView.builder(
@@ -182,6 +260,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               SizedBox(height: 18.0),
+              // Dot Indicator untuk Carousel
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(bannerItems.length, (index) {
@@ -199,8 +278,9 @@ class _HomePageState extends State<HomePage> {
                 }),
               ),
               SizedBox(height: 26.0),
+              // Judul bagian resep yang diminati
               Text(
-                'Resep Untuk Kamu',
+                'Resep Untuk Kamu', // Ganti "Paling Diminati" menjadi "Resep Untuk Kamu"
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
@@ -208,10 +288,11 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               SizedBox(height: 16.0),
+              // Grid Resep dari Firebase Firestore
               StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('resep')
-                    .where('is_shared', isEqualTo: true)
+                    .where('is_shared', isEqualTo: true) // Filter resep yang dishare
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -233,7 +314,7 @@ class _HomePageState extends State<HomePage> {
 
                   return GridView.builder(
                     shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
+                    physics: NeverScrollableScrollPhysics(), // Agar GridView bisa digulir bersama SingleChildScrollView
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       crossAxisSpacing: 16.0,
@@ -242,31 +323,34 @@ class _HomePageState extends State<HomePage> {
                     ),
                     itemCount: recipes.length,
                     itemBuilder: (context, index) {
-                      final recipeDoc = recipes[index];
-                      final recipeData = recipeDoc.data() as Map<String, dynamic>;
-                      final String documentId = recipeDoc.id;
+                      final recipeDoc = recipes[index]; // DocumentSnapshot
+                      final recipeData = recipeDoc.data() as Map<String, dynamic>; // Data resep
+                      final String documentId = recipeDoc.id; // ID dokumen resep
+                      final String userUid = recipeData['user_id'] ?? ''; // ID user pengupload resep
 
-                      final String nama = recipeData['nama'] ?? 'Nama Resep Tidak Tersedia';
-                      final String deskripsi = recipeData['deskripsi'] ?? 'Deskripsi tidak tersedia';
-                      final String rating = (recipeData['rating'] is num) ? recipeData['rating'].toString() : 'N/A';
-                      final String waktuMasak = recipeData['waktu_masak'] ?? 'N/A';
-                      final String imageUrl = recipeData['image_url'] ?? 'assets/images/default.png';
-                      final String userUid = recipeData['user_id'] ?? '';
-
+                      // FutureBuilder untuk mengambil data user (nama & gambar profil)
                       return FutureBuilder<DocumentSnapshot>(
                         future: FirebaseFirestore.instance.collection('users').doc(userUid).get(),
                         builder: (context, userSnapshot) {
-                          String authorName = 'Anonim';
-                          String profilePicturePath = 'assets/images/profilemale.jpeg'; 
+                          String authorName = 'Anonim'; // Default
+                          String profilePicturePath = 'assets/images/profilemale.jpeg'; // Default asset
 
                           if (userSnapshot.connectionState == ConnectionState.done && userSnapshot.hasData && userSnapshot.data!.exists) {
                             final Map<String, dynamic> userData = userSnapshot.data!.data() as Map<String, dynamic>;
-                            authorName = userData['nama'] ?? 'Anonim'; 
-                            profilePicturePath = userData['profile_image_url'] ?? 'assets/images/profilemale.jpeg';
+                            authorName = userData['nama'] ?? 'Anonim'; // Ambil nama dari koleksi 'users'
+                            profilePicturePath = userData['profile_image_url'] ?? 'assets/images/profilemale.jpeg'; // Ambil URL gambar profil dari 'users'
                           }
+
+                          // Data resep untuk _buildRecipeCard
+                          final String nama = recipeData['nama'] ?? 'Nama Resep Tidak Tersedia';
+                          final String deskripsi = recipeData['deskripsi'] ?? 'Deskripsi tidak tersedia';
+                          final String rating = (recipeData['rating'] is num) ? recipeData['rating'].toString() : 'N/A';
+                          final String waktuMasak = recipeData['waktu_masak'] ?? 'N/A';
+                          final String imageUrl = recipeData['image_url'] ?? 'assets/images/default.png';
 
                           return GestureDetector(
                             onTap: () {
+                              // Navigasi ke DetailResepPage dengan ID dokumen resep
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -281,14 +365,17 @@ class _HomePageState extends State<HomePage> {
                               rating: rating,
                               title: nama,
                               description: deskripsi,
-                              author: authorName, 
+                              author: authorName, // Menggunakan nama penulis dari koleksi 'users'
                               time: waktuMasak,
-                              profileImagePath: profilePicturePath,
+                              profileImagePath: profilePicturePath, // Menggunakan gambar profil dari koleksi 'users'
+                              onBookmarkTap: () {
+                                // Memanggil method bookmarkRecipe saat ikon bookmark diklik
+                                _bookmarkRecipe(documentId, recipeData);
+                              },
                             ),
                           );
                         },
                       );
-                      
                     },
                   );
                 },
@@ -297,11 +384,14 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
+      // Bottom Navigation Bar
       bottomNavigationBar: CustomNavbar(
-        currentIndex: 0,
+        currentIndex: 0, // Indeks halaman saat ini (Home)
         onTap: (index) {
+          // Navigasi ke halaman-halaman lain berdasarkan indeks navbar
           switch (index) {
             case 0:
+            // Home - sudah di halaman ini
               break;
             case 1:
               Navigator.pushReplacement(
@@ -322,6 +412,7 @@ class _HomePageState extends State<HomePage> {
               );
               break;
             case 4:
+            // Profil - belum ada halaman, lewati
               break;
           }
         },
@@ -329,6 +420,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Widget helper untuk membuat kartu banner di carousel
   Widget _buildBannerCard({
     required String image,
     required String tag,
@@ -407,6 +499,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Widget helper untuk membuat kartu resep di grid
   Widget _buildRecipeCard({
     required String imagePath,
     required String rating,
@@ -415,7 +508,9 @@ class _HomePageState extends State<HomePage> {
     required String author,
     required String time,
     required String profileImagePath,
+    required VoidCallback onBookmarkTap, // Callback untuk aksi bookmark
   }) {
+    // Logika untuk menentukan apakah gambar adalah Network, Local File, atau Asset
     final bool isNetworkImage = imagePath.startsWith('http');
     final bool isLocalFileImage = imagePath.startsWith('/data/user/') || imagePath.startsWith('/storage/emulated/') || imagePath.startsWith('file:///');
 
@@ -437,6 +532,7 @@ class _HomePageState extends State<HomePage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Bagian Gambar Resep
           Padding(
             padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 0),
             child: Container(
@@ -503,6 +599,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
+          // Konten Teks Resep
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: Column(
@@ -525,10 +622,14 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ],
                     ),
-                    Icon(
-                      Icons.bookmark_border,
-                      color: Color(0xFF662B0E),
-                      size: 18.0,
+                    // Icon Bookmark yang bisa diklik
+                    GestureDetector(
+                      onTap: onBookmarkTap, // Memanggil callback saat diklik
+                      child: Icon(
+                        Icons.bookmark_border, // Anda bisa mengubah ini menjadi Icons.bookmark_fill jika sudah dibookmark (perlu state dan cek Firestore)
+                        color: Color(0xFF662B0E),
+                        size: 18.0,
+                      ),
                     ),
                   ],
                 ),
@@ -550,10 +651,12 @@ class _HomePageState extends State<HomePage> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: 14.0),
+                // Informasi Penulis dan Waktu Memasak
                 Row(
                   children: [
                     CircleAvatar(
                       radius: 9.0,
+                      // Logika untuk gambar profil dari network atau asset
                       backgroundImage: profileImagePath.startsWith('http')
                           ? NetworkImage(profileImagePath) as ImageProvider
                           : AssetImage(profileImagePath),

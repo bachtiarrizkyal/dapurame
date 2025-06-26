@@ -1,120 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'navbar.dart';
-import 'detail_resep.dart'; // Menggunakan DetailResepPage yang sudah ada
+import 'bookmarkdetail.dart';
 import 'resepku.dart';
 import 'nutrisi.dart';
 import 'home_page.dart';
-import 'dart:io';
 
-class BookmarkPage extends StatefulWidget {
+class BookmarkPage extends StatelessWidget {
   const BookmarkPage({super.key});
 
   @override
-  State<BookmarkPage> createState() => _BookmarkPageState();
-}
-
-class _BookmarkPageState extends State<BookmarkPage> {
-  User? _currentUser;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentUser = FirebaseAuth.instance.currentUser;
-    FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      if (mounted) {
-        setState(() {
-          _currentUser = user;
-        });
-      }
-    });
-  }
-
-  Future<void> _removeBookmark(String bookmarkDocumentId) async {
-    try {
-      await FirebaseFirestore.instance.collection('bookmark').doc(bookmarkDocumentId).delete();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Resep berhasil dihapus dari bookmark!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      print("Error removing bookmark: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal menghapus bookmark: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (_currentUser == null) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFFFFAF2),
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: AppBar(
-            backgroundColor: const Color(0xFF662B0E),
-            centerTitle: true,
-            elevation: 0,
-            title: const Text(
-              'Bookmark',
-              style: TextStyle(
-                fontSize: 26,
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.bookmark_outline, size: 80, color: Color(0xFFB7B7B7)),
-              SizedBox(height: 16),
-              Text(
-                'Anda harus login untuk melihat bookmark.',
-                style: TextStyle(color: Color(0xFF4A2104), fontSize: 18, fontWeight: FontWeight.w500),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Silakan masuk untuk mengelola resep yang Anda simpan.',
-                style: TextStyle(fontSize: 14, color: Color(0xFFB7B7B7)),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-        bottomNavigationBar: CustomNavbar(
-          currentIndex: 3,
-          onTap: (index) {
-            switch (index) {
-              case 0:
-                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
-                break;
-              case 1:
-                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const NutrisiPage()));
-                break;
-              case 2:
-                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ResepkuPage()));
-                break;
-              case 3:
-                break;
-              case 4:
-                break;
-            }
-          },
-        ),
-      );
-    }
-
     return Scaffold(
       backgroundColor: const Color(0xFFFFFAF2),
       appBar: PreferredSize(
@@ -137,6 +32,7 @@ class _BookmarkPageState extends State<BookmarkPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // Search Bar
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
@@ -157,52 +53,35 @@ class _BookmarkPageState extends State<BookmarkPage> {
               ),
             ),
             const SizedBox(height: 20),
+            // Bookmark List
             Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('bookmark')
-                    .where('bookmarked_by_user_id', isEqualTo: _currentUser!.uid)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    print("Error fetching bookmarks: ${snapshot.error}");
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(child: Text('Belum ada resep yang dibookmark.'));
-                  }
-
-                  final bookmarkedRecipes = snapshot.data!.docs;
-
-                  return ListView.builder(
-                    itemCount: bookmarkedRecipes.length,
-                    itemBuilder: (context, index) {
-                      final bookmarkDoc = bookmarkedRecipes[index];
-                      final bookmarkData = bookmarkDoc.data() as Map<String, dynamic>;
-                      final String bookmarkId = bookmarkDoc.id; // ID dokumen bookmark
-
-                      final String title = bookmarkData['nama'] ?? 'Resep Bookmark';
-                      final String subtitle = bookmarkData['deskripsi'] ?? 'Deskripsi resep.';
-                      final int rating = (bookmarkData['rating'] is num) ? bookmarkData['rating'].toInt() : 0;
-                      final String imagePath = bookmarkData['image_url'] ?? 'assets/images/default.png';
-                      final String originalRecipeId = bookmarkData['original_recipe_id'] ?? bookmarkId; // Mengambil ID resep asli
-
-                      return BookmarkCard(
-                        imagePath: imagePath,
-                        title: title,
-                        subtitle: subtitle,
-                        rating: rating,
-                        bookmarkDocumentId: bookmarkId,
-                        onDelete: _removeBookmark,
-                        originalRecipeId: originalRecipeId, // Pass this to BookmarkCard
-                        // Tidak perlu pass recipeData lengkap, BookmarkDetail akan fetch sendiri
-                      );
-                    },
-                  );
-                },
+              child: ListView(
+                children: const [
+                  BookmarkCard(
+                    imagePath: 'assets/images/tahubakso.jpg',
+                    title: 'Tahu Bakso',
+                    subtitle: 'Camilan gurih yang terdiri...',
+                    rating: 4,
+                  ),
+                  BookmarkCard(
+                    imagePath: 'assets/images/nasigoreng.jpg',
+                    title: 'Nasi Goreng',
+                    subtitle: 'Cita rasa otentik khas Indonesia...',
+                    rating: 3,
+                  ),
+                  BookmarkCard(
+                    imagePath: 'assets/images/rawon.jpeg',
+                    title: 'Nasi Rawon',
+                    subtitle: 'Cita rasa otentik khas Indonesia...',
+                    rating: 4,
+                  ),
+                  BookmarkCard(
+                    imagePath: 'assets/images/sushi.jpg',
+                    title: 'Sushi',
+                    subtitle: 'Cita rasa otentik khas Jepang...',
+                    rating: 5,
+                  ),
+                ],
               ),
             ),
           ],
@@ -211,28 +90,34 @@ class _BookmarkPageState extends State<BookmarkPage> {
       bottomNavigationBar: CustomNavbar(
         currentIndex: 3,
         onTap: (index) {
+          // Navigate to different pages
           switch (index) {
             case 0:
+              // Home
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const HomePage()),
               );
               break;
             case 1:
+              // Nutrisi
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const NutrisiPage()),
               );
               break;
             case 2:
+              // Resepku
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const ResepkuPage()),
               );
               break;
             case 3:
+              // Bookmark - already here
               break;
             case 4:
+              // Profil - belum ada halaman, skip
               break;
           }
         },
@@ -246,9 +131,6 @@ class BookmarkCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final int rating;
-  final String bookmarkDocumentId;
-  final Function(String) onDelete;
-  final String originalRecipeId; // New: To navigate to original recipe detail
 
   const BookmarkCard({
     super.key,
@@ -256,55 +138,33 @@ class BookmarkCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.rating,
-    required this.bookmarkDocumentId,
-    required this.onDelete,
-    required this.originalRecipeId, // Added to constructor
   });
 
   @override
   Widget build(BuildContext context) {
-    final bool isNetworkImage = imagePath.startsWith('http');
-    final bool isLocalFileImage = imagePath.startsWith('/data/user/') || imagePath.startsWith('/storage/emulated/') || imagePath.startsWith('file:///');
-
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
       child: ListTile(
         onTap: () {
-          // Navigate to the original recipe's DetailResepPage
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => DetailResepPage(documentId: originalRecipeId),
+              builder:
+                  (context) =>
+                      BookmarkDetailPage(imagePath: imagePath, title: title),
             ),
           );
         },
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: isNetworkImage
-              ? Image.network(
-                  imagePath,
-                  width: 75,
-                  height: 68,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Image.asset('assets/images/default.png', width: 75, height: 68, fit: BoxFit.cover),
-                )
-              : isLocalFileImage
-                  ? Image.file(
-                      File(imagePath),
-                      width: 75,
-                      height: 68,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Image.asset('assets/images/default.png', width: 75, height: 68, fit: BoxFit.cover),
-                    )
-                  : Image.asset(
-                      imagePath,
-                      width: 75,
-                      height: 68,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Image.asset('assets/images/default.png', width: 75, height: 68, fit: BoxFit.cover),
-                    ),
+          child: Image.asset(
+            imagePath,
+            width: 75,
+            height: 68,
+            fit: BoxFit.cover,
+          ),
         ),
         title: Text(
           title,
@@ -398,7 +258,7 @@ class BookmarkCard extends StatelessWidget {
                           children: [
                             InkWell(
                               borderRadius: BorderRadius.circular(50),
-                              onTap: () => Navigator.of(context).pop(),
+                              onTap: () {},
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
@@ -418,6 +278,8 @@ class BookmarkCard extends StatelessWidget {
                                 ),
                               ),
                             ),
+
+                            // Vertical Line
                             Container(
                               height: 28,
                               width: 0.5,
@@ -428,10 +290,7 @@ class BookmarkCard extends StatelessWidget {
                             ),
                             InkWell(
                               borderRadius: BorderRadius.circular(50),
-                              onTap: () {
-                                onDelete(bookmarkDocumentId);
-                                Navigator.of(context).pop();
-                              },
+                              onTap: () {},
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(

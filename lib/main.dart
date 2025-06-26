@@ -17,9 +17,6 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'Poppins', useMaterial3: true),
-      // Halaman awal aplikasi diatur ke SplashScreen.
-      // Nantinya, SplashScreen yang akan menentukan apakah akan menampilkan
-      // halaman login atau halaman utama (HomePage).
       home: const SplashScreen(),
     );
   }

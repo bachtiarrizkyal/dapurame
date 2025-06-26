@@ -48,7 +48,7 @@ class _MasukScreenState extends State<MasukScreen> {
         if (userCredential.user!.emailVerified) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const ResepkuPage()),
+            MaterialPageRoute(builder: (context) => const HomePage()),
           );
         } else {
           await _auth.signOut();
