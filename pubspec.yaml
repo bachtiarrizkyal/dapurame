@@ -4,46 +4,36 @@ publish_to: "none"
 version: 0.1.0
 
 environment:
-  sdk: ">=3.4.3 <4.0.0"
+  sdk: ^3.7.2
 
 dependencies:
   flutter:
     sdk: flutter
 
-  # --- VERSI PACKAGE DIPERBARUI DAN DIGABUNGKAN ---
-  # Firebase dependencies (versi stabil terbaru)
-  firebase_core: ^2.32.0
-  firebase_auth: ^4.20.0
-  cloud_firestore: ^4.17.3
-  firebase_storage: ^11.7.7 # <-- PERBAIKAN: Menggunakan versi yang disarankan
+  # Firebase dependencies (versi yang kompatibel dengan minSdk 21)
+  firebase_core: 2.30.1
+  firebase_auth: 4.19.3
+  cloud_firestore: 4.17.0
+  firebase_storage: ^11.6.0
 
   # Image picker untuk upload foto
-  image_picker: ^1.1.2 # Versi ini sudah stabil
+  image_picker: ^1.0.7
 
   # Permission handler
-  permission_handler: ^11.3.1 # Versi ini sudah stabil
+  permission_handler: ^11.0.1
 
-  # Shared preference
-  shared_preferences: ^2.2.3 # Versi ini sudah stabil
-
-  # Notification Permission (digabungkan dari versi lain)
-  flutter_local_notifications: ^17.2.1
+  #Shared preference
+  shared_preferences: ^2.2.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  # Package untuk generate launcher icons
-  flutter_launcher_icons: ^0.13.1 # Versi ini sudah stabil
-
-  # Linter untuk analisis kode
-  flutter_lints: ^4.0.0 # Versi ini sudah stabil
+  flutter_lints: ^5.0.0
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
-    - assets/icon/
   fonts:
     - family: Poppins
       fonts:
@@ -59,10 +49,3 @@ flutter:
           weight: 600
         - asset: assets/fonts/Poppins-Bold.ttf
           weight: 700
-
-# Konfigurasi untuk flutter_launcher_icons
-flutter_launcher_icons:
-  android: "launcher_icon"
-  ios: true
-  image_path: "assets/icon/logo.png"
-  min_sdk_android: 21

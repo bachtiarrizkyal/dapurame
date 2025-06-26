@@ -1,5 +1,6 @@
 // lib/home_page.dart
 
+import 'package:dapurame/profile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -85,8 +86,6 @@ class _HomePageContentState extends State<HomePageContent> {
   int _currentPageIndex = 0;
   final PageController _pageController = PageController();
   String _greetingName = 'Pengguna'; // Default nama
-  User? _currentUser; // Tambahkan ini untuk melacak pengguna saat ini
-  Set<String> _bookmarkedRecipeIds = {}; // Set untuk menyimpan ID resep yang dibookmark
 
   final List<Map<String, String>> bannerItems = [
     {
@@ -106,52 +105,10 @@ class _HomePageContentState extends State<HomePageContent> {
     },
   ];
 
-<<<<<<< HEAD
-  void _toggleBookmark(Map<String, String> recipe) {
-    setState(() {
-      if (bookmarkedRecipes.any((r) => r['title'] == recipe['title'])) {
-        bookmarkedRecipes.removeWhere((r) => r['title'] == recipe['title']);
-        // Notifikasi saat dihapus dari bookmark
-        NotificationPage.showNotification(
-          title: 'Bookmark Dihapus',
-          body: 'Resep "${recipe['title']}" telah dihapus dari bookmark Anda.',
-          payload: 'removed_bookmark_${recipe['title']}',
-        );
-      } else {
-        bookmarkedRecipes.add(recipe);
-        // Notifikasi saat ditambahkan ke bookmark
-        NotificationPage.showNotification(
-          title: 'Resep Disimpan!',
-          body: 'Resep "${recipe['title']}" telah ditambahkan ke bookmark Anda.',
-          payload: 'added_bookmark_${recipe['title']}',
-        );
-=======
   @override
   void initState() {
     super.initState();
-    _currentUser = FirebaseAuth.instance.currentUser;
-    FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      if (mounted) {
-        setState(() {
-          _currentUser = user;
-        });
-        if (user != null) {
-          _fetchUserData();
-          _fetchUserBookmarks();
-        } else {
-          // Clear bookmarks if user logs out
-          setState(() {
-            _greetingName = 'Pengguna';
-            _bookmarkedRecipeIds.clear();
-          });
-        }
->>>>>>> dffb79249dde4ab5f1342fcdb3902a61f085c54f
-      }
-    });
-    if (_currentUser != null) {
-      _fetchUserData();
-      _fetchUserBookmarks();
-    }
+    _fetchUserData();
   }
 
   @override
@@ -162,52 +119,30 @@ class _HomePageContentState extends State<HomePageContent> {
 
   // Fungsi untuk mengambil nama pengguna dari Firestore
   Future<void> _fetchUserData() async {
-    if (_currentUser != null) {
+    User? currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
       DocumentSnapshot userDoc =
           await FirebaseFirestore.instance
               .collection('users')
-              .doc(_currentUser!.uid)
+              .doc(currentUser.uid)
               .get();
       if (userDoc.exists && mounted) {
         setState(() {
+          // --- PERUBAHAN DI SINI ---
+          // Mengambil 'username' untuk sapaan, bukan 'nama'
           _greetingName = userDoc.get('username') ?? 'Pengguna';
         });
       }
     }
   }
 
-  // Fungsi untuk mengambil ID resep yang dibookmark oleh pengguna
-  Future<void> _fetchUserBookmarks() async {
-    if (_currentUser == null) {
-      setState(() {
-        _bookmarkedRecipeIds.clear();
-      });
-      return;
-    }
-    try {
-      QuerySnapshot bookmarkSnapshot = await FirebaseFirestore.instance
-          .collection('bookmark')
-          .where('bookmarked_by_user_id', isEqualTo: _currentUser!.uid)
-          .get();
-
-      if (mounted) {
-        setState(() {
-          _bookmarkedRecipeIds = bookmarkSnapshot.docs
-              .map((doc) => doc.get('original_recipe_id') as String)
-              .toSet();
-        });
-      }
-    } catch (e) {
-      print("Error fetching user bookmarks: $e");
-    }
-  }
-
-  // Fungsi untuk mem-bookmark atau unbookmark resep
-  Future<void> _toggleBookmark(
+  // Fungsi untuk mem-bookmark resep
+  Future<void> _bookmarkRecipe(
     String recipeDocumentId,
     Map<String, dynamic> recipeData,
   ) async {
-    if (_currentUser == null) {
+    User? currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Anda harus login untuk membookmark resep.'),
@@ -216,46 +151,29 @@ class _HomePageContentState extends State<HomePageContent> {
       );
       return;
     }
-
     try {
-      final isCurrentlyBookmarked = _bookmarkedRecipeIds.contains(recipeDocumentId);
+      QuerySnapshot existingBookmarks =
+          await FirebaseFirestore.instance
+              .collection('bookmark')
+              .where('original_recipe_id', isEqualTo: recipeDocumentId)
+              .where('bookmarked_by_user_id', isEqualTo: currentUser.uid)
+              .get();
 
-      if (isCurrentlyBookmarked) {
-        // Hapus bookmark
-        QuerySnapshot existingBookmarks = await FirebaseFirestore.instance
-            .collection('bookmark')
-            .where('original_recipe_id', isEqualTo: recipeDocumentId)
-            .where('bookmarked_by_user_id', isEqualTo: _currentUser!.uid)
-            .get();
-
-        for (DocumentSnapshot doc in existingBookmarks.docs) {
-          await doc.reference.delete();
-        }
-        if (mounted) {
-          setState(() {
-            _bookmarkedRecipeIds.remove(recipeDocumentId);
-          });
-        }
+      if (existingBookmarks.docs.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Resep berhasil dihapus dari bookmark!'),
-            backgroundColor: Colors.green,
+            content: Text('Resep ini sudah ada di bookmark Anda!'),
+            backgroundColor: Colors.orange,
           ),
         );
       } else {
-        // Tambah bookmark
         Map<String, dynamic> bookmarkData = Map.from(recipeData);
         bookmarkData['original_recipe_id'] = recipeDocumentId;
-        bookmarkData['bookmarked_by_user_id'] = _currentUser!.uid;
+        bookmarkData['bookmarked_by_user_id'] = currentUser.uid;
         bookmarkData['bookmarked_at'] = FieldValue.serverTimestamp();
         await FirebaseFirestore.instance
             .collection('bookmark')
             .add(bookmarkData);
-        if (mounted) {
-          setState(() {
-            _bookmarkedRecipeIds.add(recipeDocumentId);
-          });
-        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Resep berhasil ditambahkan ke bookmark!'),
@@ -266,7 +184,7 @@ class _HomePageContentState extends State<HomePageContent> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal mengubah status bookmark: $e'),
+          content: Text('Gagal menambahkan resep ke bookmark: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -471,9 +389,6 @@ class _HomePageContentState extends State<HomePageContent> {
                       final String documentId = recipeDoc.id;
                       final String userUid = recipeData['user_id'] ?? '';
 
-                      // Cek apakah resep ini sudah dibookmark oleh pengguna saat ini
-                      final bool isBookmarked = _bookmarkedRecipeIds.contains(documentId);
-
                       return FutureBuilder<DocumentSnapshot>(
                         future:
                             FirebaseFirestore.instance
@@ -505,8 +420,8 @@ class _HomePageContentState extends State<HomePageContent> {
                                 MaterialPageRoute(
                                   builder:
                                       (context) => DetailResepPage(
-                                          documentId: documentId,
-                                        ),
+                                        documentId: documentId,
+                                      ),
                                 ),
                               );
                             },
@@ -520,9 +435,8 @@ class _HomePageContentState extends State<HomePageContent> {
                               author: authorName,
                               time: recipeData['waktu_masak'] ?? 'N/A',
                               profileImagePath: profilePicturePath,
-                              isBookmarked: isBookmarked, // Pass the bookmark status
                               onBookmarkTap:
-                                  () => _toggleBookmark(documentId, recipeData), // Use toggle function
+                                  () => _bookmarkRecipe(documentId, recipeData),
                             ),
                           );
                         },
@@ -626,7 +540,6 @@ class _HomePageContentState extends State<HomePageContent> {
     required String author,
     required String time,
     required String profileImagePath,
-    required bool isBookmarked, // NEW: Parameter untuk status bookmark
     required VoidCallback onBookmarkTap,
   }) {
     final bool isNetworkImage = imagePath.startsWith('http');
@@ -672,45 +585,45 @@ class _HomePageContentState extends State<HomePageContent> {
                 child:
                     isNetworkImage
                         ? Image.network(
-                            imagePath,
-                            height: 90.0,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder:
-                                (c, e, s) => Image.asset(
-                                  'assets/images/default.png',
-                                  height: 90.0,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                ),
-                          )
-                        : isLocalFileImage
-                            ? Image.file(
-                                File(imagePath),
+                          imagePath,
+                          height: 90.0,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (c, e, s) => Image.asset(
+                                'assets/images/default.png',
                                 height: 90.0,
                                 width: double.infinity,
                                 fit: BoxFit.cover,
-                                errorBuilder:
-                                    (c, e, s) => Image.asset(
-                                      'assets/images/default.png',
-                                      height: 90.0,
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
-                                    ),
-                              )
-                            : Image.asset(
-                                imagePath,
-                                height: 90.0,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                                errorBuilder:
-                                    (c, e, s) => Image.asset(
-                                      'assets/images/default.png',
-                                      height: 90.0,
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
-                                    ),
                               ),
+                        )
+                        : isLocalFileImage
+                        ? Image.file(
+                          File(imagePath),
+                          height: 90.0,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (c, e, s) => Image.asset(
+                                'assets/images/default.png',
+                                height: 90.0,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
+                        )
+                        : Image.asset(
+                          imagePath,
+                          height: 90.0,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (c, e, s) => Image.asset(
+                                'assets/images/default.png',
+                                height: 90.0,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
+                        ),
               ),
             ),
           ),
@@ -742,9 +655,9 @@ class _HomePageContentState extends State<HomePageContent> {
                     ),
                     GestureDetector(
                       onTap: onBookmarkTap,
-                      child: Icon(
-                        isBookmarked ? Icons.bookmark : Icons.bookmark_border, // CHANGE: Icon based on isBookmarked
-                        color: const Color(0xFF662B0E),
+                      child: const Icon(
+                        Icons.bookmark_border,
+                        color: Color(0xFF662B0E),
                         size: 18.0,
                       ),
                     ),
