@@ -1,10 +1,13 @@
 // lib/profil.dart
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:dapurame/masuk_atau_daftar.dart'; // Ganti dengan halaman login/auth gate Anda
-import 'package:dapurame/edit_profile.dart'; // <-- IMPOR HALAMAN EDIT PROFIL
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:dapurame/masuk_atau_daftar.dart';
+import 'package:dapurame/edit_profile.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -17,6 +20,9 @@ class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic>? _userData;
   User? _currentUser;
   bool _isLoading = true;
+  bool _isUploading = false;
+
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -24,18 +30,14 @@ class _ProfilePageState extends State<ProfilePage> {
     _fetchUserData();
   }
 
-  /// Mengambil data dari Firebase Authentication dan Cloud Firestore
-  /// Fungsi ini sekarang bisa dipanggil ulang untuk refresh data
   Future<void> _fetchUserData() async {
-    // Tampilkan loading indicator setiap kali data di-fetch ulang
-    if (!_isLoading) {
+    if (mounted && !_isLoading) {
       setState(() {
         _isLoading = true;
       });
     }
 
     _currentUser = FirebaseAuth.instance.currentUser;
-
     if (_currentUser != null) {
       try {
         final docSnapshot =
@@ -43,7 +45,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 .collection('users')
                 .doc(_currentUser!.uid)
                 .get();
-
         if (docSnapshot.exists && mounted) {
           setState(() {
             _userData = docSnapshot.data();
@@ -57,8 +58,6 @@ class _ProfilePageState extends State<ProfilePage> {
         }
       }
     }
-
-    // Hentikan loading setelah selesai
     if (mounted) {
       setState(() {
         _isLoading = false;
@@ -66,7 +65,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  /// Fungsi untuk logout
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
     if (mounted) {
@@ -75,6 +73,79 @@ class _ProfilePageState extends State<ProfilePage> {
         (Route<dynamic> route) => false,
       );
     }
+  }
+
+  Future<void> _pickAndUploadImage(ImageSource source) async {
+    final XFile? imageFile = await _picker.pickImage(
+      source: source,
+      imageQuality: 70,
+      maxWidth: 800,
+    );
+
+    if (imageFile == null || _currentUser == null) return;
+
+    setState(() {
+      _isUploading = true;
+    });
+
+    try {
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('profile_pictures')
+          .child('${_currentUser!.uid}.jpg');
+
+      await ref.putFile(File(imageFile.path));
+      final url = await ref.getDownloadURL();
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .update({'profile_image_url': url});
+
+      // Panggil _fetchUserData untuk refresh UI dengan data baru dari server
+      await _fetchUserData();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal mengunggah foto: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
+    }
+  }
+
+  void _showImageSourceActionSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder:
+          (context) => SafeArea(
+            child: Wrap(
+              children: <Widget>[
+                ListTile(
+                  leading: const Icon(Icons.photo_library),
+                  title: const Text('Pilih dari Galeri'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _pickAndUploadImage(ImageSource.gallery);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_camera),
+                  title: const Text('Ambil dari Kamera'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _pickAndUploadImage(ImageSource.camera);
+                  },
+                ),
+              ],
+            ),
+          ),
+    );
   }
 
   @override
@@ -92,7 +163,6 @@ class _ProfilePageState extends State<ProfilePage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
-        // --- 1. TAMBAHKAN TOMBOL EDIT DI SINI ---
         actions: [
           IconButton(
             icon: const Icon(
@@ -101,20 +171,15 @@ class _ProfilePageState extends State<ProfilePage> {
               size: 30,
             ),
             onPressed: () {
-              // Pastikan data pengguna sudah ada sebelum pindah halaman
               if (_userData != null) {
-                // 2. NAVIGASI KE HALAMAN EDIT PROFIL
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    // Kirim data pengguna saat ini ke halaman edit
                     builder:
                         (context) =>
                             EditProfilePage(currentUserData: _userData!),
                   ),
                 ).then((_) {
-                  // 3. SETELAH KEMBALI DARI HALAMAN EDIT, FETCH ULANG DATA
-                  // Ini akan memperbarui tampilan dengan data baru
                   _fetchUserData();
                 });
               }
@@ -133,28 +198,74 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  /// Widget untuk membangun tampilan profil jika data sudah siap
   Widget _buildProfileView() {
     String username = _userData?['username'] ?? 'Memuat...';
     String nama = _userData?['nama'] ?? 'Memuat...';
     String alamat = _userData?['alamat'] ?? 'Memuat...';
     String noHp = _userData?['no_hp'] ?? 'Memuat...';
     String email = _currentUser?.email ?? 'Memuat...';
+    String? profileImageUrl = _userData?['profile_image_url'];
 
-    // 4. BUNGKUS DENGAN REFRESH INDICATOR
     return RefreshIndicator(
-      onRefresh: _fetchUserData, // Tarik untuk memuat ulang data
+      onRefresh: _fetchUserData,
       color: const Color(0xFF5A3E2D),
       child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(), // Selalu bisa di-scroll
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const CircleAvatar(
-              radius: 60,
-              backgroundColor: Color(0xFFE89F43),
-              child: Icon(Icons.person, size: 70, color: Colors.white),
+            GestureDetector(
+              onTap: _showImageSourceActionSheet,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CircleAvatar(
+                    radius: 60,
+                    backgroundColor: const Color(0xFFE89F43),
+                    // --- PERBAIKAN DI SINI ---
+                    // Tambahkan parameter unik ke URL untuk memaksa refresh dari cache
+                    backgroundImage:
+                        profileImageUrl != null
+                            ? NetworkImage(
+                              '$profileImageUrl?v=${DateTime.now().millisecondsSinceEpoch}',
+                            )
+                            : null,
+                    child:
+                        profileImageUrl == null
+                            ? const Icon(
+                              Icons.person,
+                              size: 70,
+                              color: Colors.white,
+                            )
+                            : null,
+                  ),
+                  if (_isUploading)
+                    const CircularProgressIndicator(color: Colors.white),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFF5A3E2D),
+                          width: 2,
+                        ),
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.all(4.0),
+                        child: Icon(
+                          Icons.camera_alt,
+                          color: Color(0xFF5A3E2D),
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 15),
             Text(
@@ -177,6 +288,11 @@ class _ProfilePageState extends State<ProfilePage> {
               icon: Icons.badge_outlined,
               title: 'Nama Lengkap',
               value: nama,
+            ),
+            _buildInfoTile(
+              icon: Icons.alternate_email_outlined,
+              title: 'Username',
+              value: username,
             ),
             _buildInfoTile(
               icon: Icons.location_on_outlined,
@@ -217,7 +333,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  /// Widget helper untuk menampilkan setiap baris info
   Widget _buildInfoTile({
     required IconData icon,
     required String title,

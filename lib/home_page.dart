@@ -7,7 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io'; // Diperlukan untuk Image.file
 
 // Impor semua halaman untuk navigasi
-import 'package:dapurame/navbar.dart'; // <-- PERBAIKAN: MENAMBAHKAN IMPORT INI
+import 'package:dapurame/navbar.dart';
 import 'package:dapurame/nutrisi.dart';
 import 'package:dapurame/resepku.dart';
 import 'package:dapurame/bookmark.dart';
@@ -19,12 +19,6 @@ import 'package:dapurame/detail_resep.dart';
 // untuk kerapian proyek.
 void main() {
   // Pastikan Firebase sudah diinisialisasi di file main.dart utama Anda.
-  // Contoh:
-  // void main() async {
-  //   WidgetsFlutterBinding.ensureInitialized();
-  //   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  //   runApp(const MyApp());
-  // }
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -40,9 +34,8 @@ void main() {
   );
 }
 
-// --- BAGIAN INDUK NAVIGASI (DARI VERSI LOKAL ANDA) ---
-// HomePage sekarang menjadi "Induk" atau "Shell" untuk navigasi. Ini adalah
-// struktur yang benar dan efisien.
+// --- BAGIAN INDUK NAVIGASI ---
+// HomePage sekarang menjadi "Induk" atau "Shell" untuk navigasi.
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -79,7 +72,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// --- BAGIAN KONTEN HALAMAN HOME (GABUNGAN DUA VERSI) ---
+// --- BAGIAN KONTEN HALAMAN HOME ---
 // Widget ini berisi UI spesifik untuk tab Home.
 class HomePageContent extends StatefulWidget {
   const HomePageContent({super.key});
@@ -91,7 +84,7 @@ class HomePageContent extends StatefulWidget {
 class _HomePageContentState extends State<HomePageContent> {
   int _currentPageIndex = 0;
   final PageController _pageController = PageController();
-  String _userName = 'Pengguna'; // Default nama
+  String _greetingName = 'Pengguna'; // Default nama
 
   final List<Map<String, String>> bannerItems = [
     {
@@ -114,7 +107,7 @@ class _HomePageContentState extends State<HomePageContent> {
   @override
   void initState() {
     super.initState();
-    _fetchUserName();
+    _fetchUserData();
   }
 
   @override
@@ -124,7 +117,7 @@ class _HomePageContentState extends State<HomePageContent> {
   }
 
   // Fungsi untuk mengambil nama pengguna dari Firestore
-  Future<void> _fetchUserName() async {
+  Future<void> _fetchUserData() async {
     User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
       DocumentSnapshot userDoc =
@@ -134,13 +127,15 @@ class _HomePageContentState extends State<HomePageContent> {
               .get();
       if (userDoc.exists && mounted) {
         setState(() {
-          _userName = userDoc.get('nama') ?? 'Pengguna';
+          // --- PERUBAHAN DI SINI ---
+          // Mengambil 'username' untuk sapaan, bukan 'nama'
+          _greetingName = userDoc.get('username') ?? 'Pengguna';
         });
       }
     }
   }
 
-  // Fungsi untuk mem-bookmark resep (dari versi server)
+  // Fungsi untuk mem-bookmark resep
   Future<void> _bookmarkRecipe(
     String recipeDocumentId,
     Map<String, dynamic> recipeData,
@@ -210,7 +205,7 @@ class _HomePageContentState extends State<HomePageContent> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Halo, $_userName!', // Sapaan dinamis
+                    'Halo, $_greetingName!', // Sapaan dinamis menggunakan username
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,

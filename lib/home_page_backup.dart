@@ -649,7 +649,7 @@ void main() {
   );
 }
 
-final List<Map<String, String>> bannerItems = [
+final List<Map<String, String>> banner_Items = [
   {
     'image': 'assets/images/ramen.jpeg',
     'tag': 'Resep Terbaru!',
@@ -667,14 +667,14 @@ final List<Map<String, String>> bannerItems = [
   },
 ];
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class Home_Page extends StatefulWidget {
+  const Home_Page({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _Home_PageState extends State<HomePage> {
   int _currentPageIndex = 0;
   final PageController _pageController = PageController();
 

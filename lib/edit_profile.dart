@@ -17,8 +17,11 @@ class EditProfilePage extends StatefulWidget {
 class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _namaController;
+  late TextEditingController _usernameController; // <-- Tambahan
   late TextEditingController _alamatController;
   late TextEditingController _noHpController;
+  late TextEditingController _emailController; // <-- Tambahan
+
   bool _isLoading = false;
 
   @override
@@ -28,19 +31,27 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _namaController = TextEditingController(
       text: widget.currentUserData['nama'] ?? '',
     );
+    _usernameController = TextEditingController(
+      text: widget.currentUserData['username'] ?? '',
+    ); // <-- Tambahan
     _alamatController = TextEditingController(
       text: widget.currentUserData['alamat'] ?? '',
     );
     _noHpController = TextEditingController(
       text: widget.currentUserData['no_hp'] ?? '',
     );
+    _emailController = TextEditingController(
+      text: widget.currentUserData['email'] ?? '',
+    ); // <-- Tambahan
   }
 
   @override
   void dispose() {
     _namaController.dispose();
+    _usernameController.dispose(); // <-- Tambahan
     _alamatController.dispose();
     _noHpController.dispose();
+    _emailController.dispose(); // <-- Tambahan
     super.dispose();
   }
 
@@ -62,6 +73,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             .doc(user.uid)
             .update({
               'nama': _namaController.text.trim(),
+              'username': _usernameController.text.trim(), // <-- Tambahan
               'alamat': _alamatController.text.trim(),
               'no_hp': _noHpController.text.trim(),
             });
@@ -127,6 +139,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             : null,
               ),
               const SizedBox(height: 20),
+              // --- Field untuk Username ---
+              _buildTextFormField(
+                controller: _usernameController,
+                labelText: 'Username',
+                icon: Icons.alternate_email,
+                validator:
+                    (value) =>
+                        value == null || value.isEmpty
+                            ? 'Username tidak boleh kosong'
+                            : null,
+              ),
+              const SizedBox(height: 20),
               _buildTextFormField(
                 controller: _alamatController,
                 labelText: 'Alamat',
@@ -149,6 +173,27 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   if (value.length < 10) return 'Nomor HP terlalu pendek';
                   return null;
                 },
+              ),
+              const SizedBox(height: 20),
+              // --- Field untuk Email (Read-only) ---
+              TextFormField(
+                controller: _emailController,
+                readOnly: true, // Tidak bisa diedit
+                style: const TextStyle(color: Colors.grey),
+                decoration: InputDecoration(
+                  labelText: 'Email (Tidak bisa diubah)',
+                  labelStyle: const TextStyle(color: Color(0xFF5A3E2D)),
+                  prefixIcon: const Icon(
+                    Icons.email_outlined,
+                    color: Colors.grey,
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade200,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
               const SizedBox(height: 40),
               SizedBox(
