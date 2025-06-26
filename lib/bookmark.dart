@@ -1,14 +1,10 @@
 // lib/bookmark.dart
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
-import 'package:dapurame/detail_resep.dart';
-import 'package:dapurame/navbar.dart';
-import 'package:dapurame/home_page.dart';
-import 'package:dapurame/nutrisi.dart';
-import 'package:dapurame/resepku.dart';
-
+import 'package:dapurame/bookmarkdetail.dart'; // <-- PERBAIKAN: Ganti import ke bookmarkdetail.dart
 
 class BookmarkPage extends StatefulWidget {
   const BookmarkPage({super.key});
@@ -19,11 +15,14 @@ class BookmarkPage extends StatefulWidget {
 
 class _BookmarkPageState extends State<BookmarkPage> {
   User? _currentUser;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _currentUser = FirebaseAuth.instance.currentUser;
+    // Listener ini bagus untuk menjaga state tetap update jika ada perubahan login/logout
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
       if (mounted) {
         setState(() {
@@ -31,6 +30,17 @@ class _BookmarkPageState extends State<BookmarkPage> {
         });
       }
     });
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _removeBookmark(String bookmarkDocumentId) async {
@@ -59,6 +69,7 @@ class _BookmarkPageState extends State<BookmarkPage> {
     }
   }
 
+  // Helper widget untuk membuat AppBar agar tidak duplikasi kode
   PreferredSizeWidget _buildAppBar() {
     return PreferredSize(
       preferredSize: const Size.fromHeight(60),
@@ -81,6 +92,7 @@ class _BookmarkPageState extends State<BookmarkPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Tampilan jika pengguna belum login
     if (_currentUser == null) {
       return Scaffold(
         backgroundColor: const Color(0xFFFFFAF2),
@@ -116,29 +128,10 @@ class _BookmarkPageState extends State<BookmarkPage> {
             ),
           ),
         ),
-        bottomNavigationBar: CustomNavbar(
-          currentIndex: 3,
-          onTap: (index) {
-            switch (index) {
-              case 0:
-                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
-                break;
-              case 1:
-                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const NutrisiPage()));
-                break;
-              case 2:
-                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ResepkuPage()));
-                break;
-              case 3:
-                break;
-              case 4:
-                break;
-            }
-          },
-        ),
       );
     }
 
+    // Tampilan jika pengguna sudah login
     return Scaffold(
       backgroundColor: const Color(0xFFFFFAF2),
       appBar: _buildAppBar(),
@@ -146,6 +139,7 @@ class _BookmarkPageState extends State<BookmarkPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // Search Bar
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
@@ -153,8 +147,9 @@ class _BookmarkPageState extends State<BookmarkPage> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.brown.shade200),
               ),
-              child: const TextField(
-                decoration: InputDecoration(
+              child: TextField(
+                controller: _searchController,
+                decoration: const InputDecoration(
                   icon: Icon(Icons.search, color: Color(0xFF662B0E)),
                   hintText: 'Cari resep di bookmark...',
                   hintStyle: TextStyle(
@@ -167,15 +162,17 @@ class _BookmarkPageState extends State<BookmarkPage> {
               ),
             ),
             const SizedBox(height: 20),
+            // Daftar Bookmark dari Firestore
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('bookmark')
-                    .where(
-                      'bookmarked_by_user_id',
-                      isEqualTo: _currentUser!.uid,
-                    )
-                    .snapshots(),
+                stream:
+                    FirebaseFirestore.instance
+                        .collection('bookmark')
+                        .where(
+                          'bookmarked_by_user_id',
+                          isEqualTo: _currentUser!.uid,
+                        )
+                        .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
@@ -188,10 +185,29 @@ class _BookmarkPageState extends State<BookmarkPage> {
                     return Center(child: Text('Error: ${snapshot.error}'));
                   }
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(child: Text('Belum ada resep yang dibookmark.'));
+                    return const Center(
+                      child: Text('Belum ada resep yang dibookmark.'),
+                    );
                   }
 
-                  final bookmarkedRecipes = snapshot.data!.docs;
+                  var bookmarkedRecipes = snapshot.data!.docs;
+
+                  // Filter berdasarkan query pencarian
+                  if (_searchQuery.isNotEmpty) {
+                    bookmarkedRecipes =
+                        bookmarkedRecipes.where((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          final title =
+                              data['nama']?.toString().toLowerCase() ?? '';
+                          return title.contains(_searchQuery.toLowerCase());
+                        }).toList();
+                  }
+
+                  if (bookmarkedRecipes.isEmpty) {
+                    return Center(
+                      child: Text('Resep "$_searchQuery" tidak ditemukan.'),
+                    );
+                  }
 
                   return ListView.builder(
                     itemCount: bookmarkedRecipes.length,
@@ -200,13 +216,10 @@ class _BookmarkPageState extends State<BookmarkPage> {
                       final bookmarkData =
                           bookmarkDoc.data() as Map<String, dynamic>;
 
-                      final String waktuMasak = bookmarkData['waktu_masak'] ?? 'N/A';
-
                       return BookmarkCard(
                         bookmarkData: bookmarkData,
                         bookmarkDocumentId: bookmarkDoc.id,
                         onDelete: () => _removeBookmark(bookmarkDoc.id),
-                        waktuMasak: waktuMasak,
                       );
                     },
                   );
@@ -220,29 +233,29 @@ class _BookmarkPageState extends State<BookmarkPage> {
   }
 }
 
+// Widget untuk menampilkan satu kartu bookmark
 class BookmarkCard extends StatelessWidget {
   final Map<String, dynamic> bookmarkData;
   final String bookmarkDocumentId;
   final VoidCallback onDelete;
-  final String waktuMasak;
 
   const BookmarkCard({
     super.key,
     required this.bookmarkData,
     required this.bookmarkDocumentId,
     required this.onDelete,
-    required this.waktuMasak,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Mengambil data dengan aman, memberikan nilai default jika tidak ada
     final String title = bookmarkData['nama'] ?? 'Tanpa Judul';
     final String subtitle =
         bookmarkData['deskripsi'] ?? 'Deskripsi tidak tersedia.';
     final int rating = (bookmarkData['rating'] as num?)?.toInt() ?? 0;
     final String imagePath =
         bookmarkData['image_url'] ?? 'assets/images/default.png';
-    final String originalRecipeId = bookmarkData['original_recipe_id'] ?? '';
+    final String waktuMasak = bookmarkData['waktu_masak'] ?? 'N/A';
 
     final bool isNetworkImage = imagePath.startsWith('http');
     final bool isLocalFileImage =
@@ -259,16 +272,18 @@ class BookmarkCard extends StatelessWidget {
           vertical: 8.0,
           horizontal: 12.0,
         ),
+        // --- PERBAIKAN: Mengarahkan ke BookmarkDetailPage ---
         onTap: () {
-          if (originalRecipeId.isNotEmpty) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder:
-                    (context) => DetailResepPage(documentId: originalRecipeId),
-              ),
-            );
-          }
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              // Mengirim ID dokumen dari koleksi 'bookmark'
+              builder:
+                  (context) => BookmarkDetailPage(
+                    bookmarkDocumentId: bookmarkDocumentId,
+                  ),
+            ),
+          );
         },
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
@@ -278,33 +293,33 @@ class BookmarkCard extends StatelessWidget {
             child:
                 isNetworkImage
                     ? Image.network(
-                        imagePath,
-                        fit: BoxFit.cover,
-                        errorBuilder:
-                            (c, e, s) => Image.asset(
-                              'assets/images/default.png',
-                              fit: BoxFit.cover,
-                            ),
-                      )
-                    : isLocalFileImage
-                        ? Image.file(
-                            File(imagePath),
+                      imagePath,
+                      fit: BoxFit.cover,
+                      errorBuilder:
+                          (c, e, s) => Image.asset(
+                            'assets/images/default.png',
                             fit: BoxFit.cover,
-                            errorBuilder:
-                                (c, e, s) => Image.asset(
-                                  'assets/images/default.png',
-                                  fit: BoxFit.cover,
-                                ),
-                          )
-                        : Image.asset(
-                            imagePath,
-                            fit: BoxFit.cover,
-                            errorBuilder:
-                                (c, e, s) => Image.asset(
-                                  'assets/images/default.png',
-                                  fit: BoxFit.cover,
-                                ),
                           ),
+                    )
+                    : isLocalFileImage
+                    ? Image.file(
+                      File(imagePath),
+                      fit: BoxFit.cover,
+                      errorBuilder:
+                          (c, e, s) => Image.asset(
+                            'assets/images/default.png',
+                            fit: BoxFit.cover,
+                          ),
+                    )
+                    : Image.asset(
+                      imagePath,
+                      fit: BoxFit.cover,
+                      errorBuilder:
+                          (c, e, s) => Image.asset(
+                            'assets/images/default.png',
+                            fit: BoxFit.cover,
+                          ),
+                    ),
           ),
         ),
         title: Text(
@@ -334,120 +349,58 @@ class BookmarkCard extends StatelessWidget {
                   waktuMasak,
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
+                const SizedBox(width: 12),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(
+                    5,
+                    (index) => Icon(
+                      index < rating ? Icons.star : Icons.star_border,
+                      color: const Color(0xFFE68B2B),
+                      size: 16,
+                    ),
+                  ),
+                ),
               ],
             ),
           ],
         ),
-        trailing: GestureDetector(
-          onTap: () {
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return Dialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Align(
-                          alignment: Alignment.topRight,
-                          child: GestureDetector(
-                            onTap: () => Navigator.of(context).pop(),
-                            child: const Icon(
-                              Icons.close,
-                              color: Color(0xFF4A2104),
-                            ),
-                          ),
-                        ),
-                        const Icon(
-                          Icons.delete,
-                          size: 120,
-                          color: Color(0xFFE68B2B),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Kamu yakin akan menghapus\nresep ini dari bookmark?',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF4A2104),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            InkWell(
-                              borderRadius: BorderRadius.circular(50),
-                              onTap: () => Navigator.of(context).pop(),
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.orange.withOpacity(0.1),
-                                      spreadRadius: 1,
-                                      blurRadius: 5,
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.close,
-                                  color: Color(0xFFE68B2B),
-                                  size: 28,
-                                ),
-                              ),
-                            ),
-                            Container(
-                              height: 28,
-                              width: 0.5,
-                              color: const Color(0xFFE68B2B),
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                            ),
-                            InkWell(
-                              borderRadius: BorderRadius.circular(50),
-                              onTap: () {
-                                onDelete();
-                                Navigator.of(context).pop();
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.orange.withOpacity(0.1),
-                                      spreadRadius: 1,
-                                      blurRadius: 5,
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.check,
-                                  color: Color(0xFFE68B2B),
-                                  size: 25,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-          child: const Icon(Icons.delete, color: Color(0xFFE68B2B)),
+        trailing: IconButton(
+          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+          onPressed: () => _showDeleteConfirmation(context, title),
         ),
       ),
+    );
+  }
+
+  // Dialog konfirmasi hapus
+  void _showDeleteConfirmation(BuildContext context, String recipeName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text('Hapus Bookmark'),
+          content: Text(
+            'Anda yakin akan menghapus resep "$recipeName" dari bookmark?',
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Batal'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            TextButton(
+              child: Text('Hapus', style: TextStyle(color: Colors.red)),
+              onPressed: () {
+                onDelete();
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }
