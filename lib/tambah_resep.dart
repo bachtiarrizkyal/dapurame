@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'search_bahan.dart';
+import 'notification_page.dart';
 
 class TambahResepPage extends StatefulWidget {
   final String? documentId;
@@ -345,6 +346,12 @@ class _TambahResepPageState extends State<TambahResepPage> {
             content: Text('✅ Resep berhasil disimpan!'),
             backgroundColor: Colors.green,
           ),
+        );
+        // PUSH NOTIFICATION SETELAH RESEP BARU DISIMPAN
+        NotificationPage.showNotification(
+          title: 'Resep Baru Ditambahkan!',
+          body: 'Resep "${_namaController.text}" Anda telah berhasil diunggah.',
+          payload: 'new_recipe_${_namaController.text}',
         );
       }
 

@@ -25,6 +25,9 @@ dependencies:
   #Shared preference
   shared_preferences: ^2.2.0
 
+  # Notification Permission
+  flutter_local_notifications: ^17.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
