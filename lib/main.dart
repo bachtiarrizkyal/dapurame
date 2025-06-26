@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart'; // File ini digenerate oleh FlutterFire
-import 'auth_gate.dart'; // Impor halaman AuthGate Anda
+import 'package:dapurame/firebase_options.dart'; // Pastikan path ini benar
+import 'package:dapurame/auth_gate.dart'; // Impor halaman AuthGate Anda
 
 // Fungsi main() adalah titik awal aplikasi Anda
 void main() async {
@@ -32,14 +32,21 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    // Menggabungkan perubahan dari kedua versi
+    return MaterialApp(
       // Menghilangkan banner "DEBUG" di pojok kanan atas
       debugShowCheckedModeBanner: false,
 
+      // Mengambil ThemeData untuk konsistensi font dan style
+      theme: ThemeData(
+        fontFamily: 'Poppins',
+        useMaterial3: true,
+        // Anda bisa menambahkan pengaturan tema lain di sini
+      ),
+
       // Mengatur AuthGate sebagai halaman pertama yang akan dimuat.
-      // AuthGate akan secara otomatis menentukan apakah harus menampilkan
-      // halaman login atau halaman utama (HomePage).
-      home: AuthGate(),
+      // Ini adalah pendekatan yang benar untuk menangani sesi login.
+      home: const AuthGate(),
     );
   }
 }

@@ -2,16 +2,29 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'navbar.dart';
-import 'resepku.dart';
-import 'bookmark.dart';
-import 'nutrisi.dart';
-import 'notification_page.dart';
-import 'profile.dart'; // <-- 1. IMPOR HALAMAN PROFIL YANG BARU
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io'; // Diperlukan untuk Image.file
 
-// Fungsi main() sebaiknya berada di file terpisah (main.dart),
-// tapi untuk sementara kita biarkan di sini.
+// Impor semua halaman untuk navigasi
+import 'package:dapurame/navbar.dart'; // <-- PERBAIKAN: MENAMBAHKAN IMPORT INI
+import 'package:dapurame/nutrisi.dart';
+import 'package:dapurame/resepku.dart';
+import 'package:dapurame/bookmark.dart';
+import 'package:dapurame/profile.dart';
+import 'package:dapurame/notification_page.dart';
+import 'package:dapurame/detail_resep.dart';
+
+// Catatan: Fungsi main() ini sebaiknya ada di file terpisah (main.dart)
+// untuk kerapian proyek.
 void main() {
+  // Pastikan Firebase sudah diinisialisasi di file main.dart utama Anda.
+  // Contoh:
+  // void main() async {
+  //   WidgetsFlutterBinding.ensureInitialized();
+  //   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  //   runApp(const MyApp());
+  // }
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -22,12 +35,14 @@ void main() {
   runApp(
     const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: HomePage(), // Mulai dari HomePage sebagai induk
+      home: HomePage(), // Mulai dari HomePage sebagai induk navigasi
     ),
   );
 }
 
-// HomePage sekarang menjadi "Induk" atau "Shell" untuk navigasi
+// --- BAGIAN INDUK NAVIGASI (DARI VERSI LOKAL ANDA) ---
+// HomePage sekarang menjadi "Induk" atau "Shell" untuk navigasi. Ini adalah
+// struktur yang benar dan efisien.
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -36,10 +51,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // State untuk menyimpan index halaman yang sedang aktif
   int _currentIndex = 0;
 
-  // 2. BUAT DAFTAR HALAMAN SESUAI URUTAN NAVBAR
+  // Daftar halaman yang akan ditampilkan sesuai urutan navbar
   final List<Widget> _pages = [
     const HomePageContent(), // Konten untuk Home (index 0)
     const NutrisiPage(), // Halaman Nutrisi (index 1)
@@ -51,11 +65,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 3. BODY SEKARANG MENAMPILKAN HALAMAN DARI DAFTAR DI ATAS
-      //    BERDASARKAN `_currentIndex`
       body: _pages[_currentIndex],
-
-      // 4. NAVBAR MENGGUNAKAN LOGIKA BARU YANG LEBIH EFISIEN
       bottomNavigationBar: CustomNavbar(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -69,10 +79,8 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// ------------------------------------------------------------------
-// WIDGET BARU UNTUK KONTEN KHUSUS HALAMAN HOME
-// Semua kode UI Home Anda yang lama dipindahkan ke sini.
-// ------------------------------------------------------------------
+// --- BAGIAN KONTEN HALAMAN HOME (GABUNGAN DUA VERSI) ---
+// Widget ini berisi UI spesifik untuk tab Home.
 class HomePageContent extends StatefulWidget {
   const HomePageContent({super.key});
 
@@ -83,6 +91,7 @@ class HomePageContent extends StatefulWidget {
 class _HomePageContentState extends State<HomePageContent> {
   int _currentPageIndex = 0;
   final PageController _pageController = PageController();
+  String _userName = 'Pengguna'; // Default nama
 
   final List<Map<String, String>> bannerItems = [
     {
@@ -103,9 +112,87 @@ class _HomePageContentState extends State<HomePageContent> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _fetchUserName();
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  // Fungsi untuk mengambil nama pengguna dari Firestore
+  Future<void> _fetchUserName() async {
+    User? currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      DocumentSnapshot userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser.uid)
+              .get();
+      if (userDoc.exists && mounted) {
+        setState(() {
+          _userName = userDoc.get('nama') ?? 'Pengguna';
+        });
+      }
+    }
+  }
+
+  // Fungsi untuk mem-bookmark resep (dari versi server)
+  Future<void> _bookmarkRecipe(
+    String recipeDocumentId,
+    Map<String, dynamic> recipeData,
+  ) async {
+    User? currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Anda harus login untuk membookmark resep.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    try {
+      QuerySnapshot existingBookmarks =
+          await FirebaseFirestore.instance
+              .collection('bookmark')
+              .where('original_recipe_id', isEqualTo: recipeDocumentId)
+              .where('bookmarked_by_user_id', isEqualTo: currentUser.uid)
+              .get();
+
+      if (existingBookmarks.docs.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Resep ini sudah ada di bookmark Anda!'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        Map<String, dynamic> bookmarkData = Map.from(recipeData);
+        bookmarkData['original_recipe_id'] = recipeDocumentId;
+        bookmarkData['bookmarked_by_user_id'] = currentUser.uid;
+        bookmarkData['bookmarked_at'] = FieldValue.serverTimestamp();
+        await FirebaseFirestore.instance
+            .collection('bookmark')
+            .add(bookmarkData);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Resep berhasil ditambahkan ke bookmark!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menambahkan resep ke bookmark: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -118,13 +205,13 @@ class _HomePageContentState extends State<HomePageContent> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Bagian Header (Halo, Wanda! & Notifikasi)
+              // Header dengan sapaan dan ikon notifikasi
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Halo, Wanda!', // Nanti ini bisa kita buat dinamis
-                    style: TextStyle(
+                  Text(
+                    'Halo, $_userName!', // Sapaan dinamis
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
                       color: Color(0xFF8B4513),
@@ -215,7 +302,7 @@ class _HomePageContentState extends State<HomePageContent> {
               ),
               const SizedBox(height: 24.0),
 
-              // Carousel Banner
+              // Carousel Banner Resep
               SizedBox(
                 height: 200.0,
                 child: PageView.builder(
@@ -261,9 +348,9 @@ class _HomePageContentState extends State<HomePageContent> {
               ),
               const SizedBox(height: 26.0),
 
-              // Grid Resep Paling Diminati
+              // Grid Resep Dinamis dari Firestore
               const Text(
-                'Paling Diminati',
+                'Resep Untuk Kamu',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
@@ -271,88 +358,94 @@ class _HomePageContentState extends State<HomePageContent> {
                 ),
               ),
               const SizedBox(height: 16.0),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16.0,
-                  mainAxisSpacing: 16.0,
-                  childAspectRatio: 0.65,
-                ),
-                itemCount: 6, // Sesuaikan dengan jumlah resep
-                itemBuilder: (context, index) {
-                  final List<Map<String, String>> recipes = [
-                    {
-                      'imagePath': 'assets/images/risolmayo.jpeg',
-                      'rating': '9.2',
-                      'title': 'Risol Mayo',
-                      'description':
-                          'Risol mayo adalah jajanan tradisional berbentuk gulungan...',
-                      'author': 'Maul - ITS',
-                      'time': '20 mins',
-                      'profileImagePath': 'assets/images/profilemale.jpeg',
+              StreamBuilder<QuerySnapshot>(
+                stream:
+                    FirebaseFirestore.instance
+                        .collection('resep')
+                        .where('is_shared', isEqualTo: true)
+                        .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting)
+                    return const Center(child: CircularProgressIndicator());
+                  if (snapshot.hasError)
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+                    return const Center(
+                      child: Text('Tidak ada resep yang diunggah.'),
+                    );
+
+                  final recipes = snapshot.data!.docs;
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16.0,
+                          mainAxisSpacing: 16.0,
+                          childAspectRatio: 0.65,
+                        ),
+                    itemCount: recipes.length,
+                    itemBuilder: (context, index) {
+                      final recipeDoc = recipes[index];
+                      final recipeData =
+                          recipeDoc.data() as Map<String, dynamic>;
+                      final String documentId = recipeDoc.id;
+                      final String userUid = recipeData['user_id'] ?? '';
+
+                      return FutureBuilder<DocumentSnapshot>(
+                        future:
+                            FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(userUid)
+                                .get(),
+                        builder: (context, userSnapshot) {
+                          String authorName = 'Anonim';
+                          String profilePicturePath =
+                              'assets/images/profilemale.jpeg';
+
+                          if (userSnapshot.connectionState ==
+                                  ConnectionState.done &&
+                              userSnapshot.hasData &&
+                              userSnapshot.data!.exists) {
+                            final Map<String, dynamic> userData =
+                                userSnapshot.data!.data()
+                                    as Map<String, dynamic>;
+                            authorName = userData['nama'] ?? 'Anonim';
+                            profilePicturePath =
+                                userData['profile_image_url'] ??
+                                'assets/images/profilemale.jpeg';
+                          }
+
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => DetailResepPage(
+                                        documentId: documentId,
+                                      ),
+                                ),
+                              );
+                            },
+                            child: _buildRecipeCard(
+                              imagePath:
+                                  recipeData['image_url'] ??
+                                  'assets/images/default.png',
+                              rating: (recipeData['rating'] ?? 0).toString(),
+                              title: recipeData['nama'] ?? 'Tanpa Judul',
+                              description: recipeData['deskripsi'] ?? '',
+                              author: authorName,
+                              time: recipeData['waktu_masak'] ?? 'N/A',
+                              profileImagePath: profilePicturePath,
+                              onBookmarkTap:
+                                  () => _bookmarkRecipe(documentId, recipeData),
+                            ),
+                          );
+                        },
+                      );
                     },
-                    {
-                      'imagePath': 'assets/images/nasipadang.jpg',
-                      'rating': '9.5',
-                      'title': 'Nasi Padang',
-                      'description':
-                          'Nasi Padang adalah makanan khas Minangkabau...',
-                      'author': 'Zumar - ITS',
-                      'time': '25 mins',
-                      'profileImagePath': 'assets/images/profilemale.jpeg',
-                    },
-                    {
-                      'imagePath': 'assets/images/rawon.jpeg',
-                      'rating': '8.7',
-                      'title': 'Nasi Rawon',
-                      'description':
-                          'Rawon adalah masakan sup daging sapi berkuah hitam...',
-                      'author': 'Cindy - Unair',
-                      'time': '15 mins',
-                      'profileImagePath': 'assets/images/profilefemale.jpeg',
-                    },
-                    {
-                      'imagePath': 'assets/images/tahubakso.jpg',
-                      'rating': '8.5',
-                      'title': 'Tahu Bakso',
-                      'description':
-                          'Tahu Bakso adalah kuliner asal Semarang...',
-                      'author': 'Ruli - ITS',
-                      'time': '17 mins',
-                      'profileImagePath': 'assets/images/profilemale.jpeg',
-                    },
-                    {
-                      'imagePath': 'assets/images/tahu-tek.jpeg',
-                      'rating': '8.9',
-                      'title': 'Tahu Tek',
-                      'description':
-                          'Tahu Tek adalah kuliner yang terdiri dari tahu goreng...',
-                      'author': 'Ruli - ITS',
-                      'time': '17 mins',
-                      'profileImagePath': 'assets/images/profilemale.jpeg',
-                    },
-                    {
-                      'imagePath': 'assets/images/sushi.jpg',
-                      'rating': '9.5',
-                      'title': 'Sushi',
-                      'description':
-                          'Sushi adalah makanan Jepang yang terdiri dari nasi...',
-                      'author': 'Rony - Ubaya',
-                      'time': '17 mins',
-                      'profileImagePath': 'assets/images/profilemale.jpeg',
-                    },
-                  ];
-                  final recipe = recipes[index];
-                  return _buildRecipeCard(
-                    imagePath: recipe['imagePath']!,
-                    rating: recipe['rating']!,
-                    title: recipe['title']!,
-                    description: recipe['description']!,
-                    author: recipe['author']!,
-                    time: recipe['time']!,
-                    profileImagePath: recipe['profileImagePath']!,
                   );
                 },
               ),
@@ -363,13 +456,12 @@ class _HomePageContentState extends State<HomePageContent> {
     );
   }
 
-  // Helper widget untuk banner dan resep tidak perlu diubah
+  // Helper widget untuk banner (tidak berubah)
   Widget _buildBannerCard({
     required String image,
     required String tag,
     required String title,
   }) {
-    // ... (kode banner card Anda yang lama)
     return Container(
       margin: const EdgeInsets.only(right: 16.0),
       decoration: BoxDecoration(
@@ -443,6 +535,7 @@ class _HomePageContentState extends State<HomePageContent> {
     );
   }
 
+  // Helper widget untuk kartu resep (dari versi server, lebih canggih)
   Widget _buildRecipeCard({
     required String imagePath,
     required String rating,
@@ -451,8 +544,14 @@ class _HomePageContentState extends State<HomePageContent> {
     required String author,
     required String time,
     required String profileImagePath,
+    required VoidCallback onBookmarkTap,
   }) {
-    // ... (kode recipe card Anda yang lama)
+    final bool isNetworkImage = imagePath.startsWith('http');
+    final bool isLocalFileImage =
+        imagePath.startsWith('/data/user/') ||
+        imagePath.startsWith('/storage/emulated/') ||
+        imagePath.startsWith('file:///');
+
     return Container(
       width: 180,
       decoration: BoxDecoration(
@@ -463,7 +562,7 @@ class _HomePageContentState extends State<HomePageContent> {
             color: Colors.grey.withOpacity(0.2),
             spreadRadius: 2,
             blurRadius: 5,
-            offset: Offset(0, 3),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -481,18 +580,54 @@ class _HomePageContentState extends State<HomePageContent> {
                     color: Colors.black.withOpacity(0.15),
                     spreadRadius: 1,
                     blurRadius: 8,
-                    offset: Offset(0, 4),
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10.0),
-                child: Image.asset(
-                  imagePath,
-                  height: 90.0,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
+                child:
+                    isNetworkImage
+                        ? Image.network(
+                          imagePath,
+                          height: 90.0,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (c, e, s) => Image.asset(
+                                'assets/images/default.png',
+                                height: 90.0,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
+                        )
+                        : isLocalFileImage
+                        ? Image.file(
+                          File(imagePath),
+                          height: 90.0,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (c, e, s) => Image.asset(
+                                'assets/images/default.png',
+                                height: 90.0,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
+                        )
+                        : Image.asset(
+                          imagePath,
+                          height: 90.0,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (c, e, s) => Image.asset(
+                                'assets/images/default.png',
+                                height: 90.0,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
+                        ),
               ),
             ),
           ),
@@ -506,11 +641,15 @@ class _HomePageContentState extends State<HomePageContent> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.star, color: Color(0xFF662B0E), size: 14.0),
-                        SizedBox(width: 3.0),
+                        const Icon(
+                          Icons.star,
+                          color: Color(0xFF662B0E),
+                          size: 14.0,
+                        ),
+                        const SizedBox(width: 3.0),
                         Text(
                           rating,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             color: Color(0xFF662B0E),
                             fontSize: 13.0,
@@ -518,59 +657,68 @@ class _HomePageContentState extends State<HomePageContent> {
                         ),
                       ],
                     ),
-                    Icon(
-                      Icons.bookmark_border,
-                      color: Color(0xFF662B0E),
-                      size: 18.0,
+                    GestureDetector(
+                      onTap: onBookmarkTap,
+                      child: const Icon(
+                        Icons.bookmark_border,
+                        color: Color(0xFF662B0E),
+                        size: 18.0,
+                      ),
                     ),
                   ],
                 ),
-                SizedBox(height: 8.0),
+                const SizedBox(height: 8.0),
                 Text(
                   title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 14.0,
                     color: Color(0xFF662B0E),
                   ),
                 ),
-                SizedBox(height: 4.0),
+                const SizedBox(height: 4.0),
                 Text(
                   description,
-                  style: TextStyle(fontSize: 10.0, color: Color(0xFF662B0E)),
+                  style: const TextStyle(
+                    fontSize: 10.0,
+                    color: Color(0xFF662B0E),
+                  ),
                   textAlign: TextAlign.justify,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: 14.0),
+                const SizedBox(height: 14.0),
                 Row(
                   children: [
                     CircleAvatar(
                       radius: 9.0,
-                      backgroundImage: AssetImage(profileImagePath),
+                      backgroundImage:
+                          profileImagePath.startsWith('http')
+                              ? NetworkImage(profileImagePath) as ImageProvider
+                              : AssetImage(profileImagePath),
                     ),
-                    SizedBox(width: 4.0),
+                    const SizedBox(width: 4.0),
                     Text(
                       author,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 10.0,
                         color: Color(0xFF662B0E),
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    Spacer(),
+                    const Spacer(),
                     Container(
-                      padding: EdgeInsets.symmetric(
+                      padding: const EdgeInsets.symmetric(
                         horizontal: 6.0,
                         vertical: 3.0,
                       ),
                       decoration: BoxDecoration(
-                        color: Color.fromRGBO(250, 228, 194, 1),
+                        color: const Color.fromRGBO(250, 228, 194, 1),
                         borderRadius: BorderRadius.circular(5.0),
                       ),
                       child: Text(
                         time,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Color(0xFF662B0E),
                           fontSize: 8.0,
                           fontWeight: FontWeight.w500,
