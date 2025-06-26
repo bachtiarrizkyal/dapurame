@@ -1,3 +1,5 @@
+// lib/home_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'navbar.dart';
@@ -5,28 +7,83 @@ import 'resepku.dart';
 import 'bookmark.dart';
 import 'nutrisi.dart';
 import 'notification_page.dart';
+import 'profile.dart'; // <-- 1. IMPOR HALAMAN PROFIL YANG BARU
 
+// Fungsi main() sebaiknya berada di file terpisah (main.dart),
+// tapi untuk sementara kita biarkan di sini.
 void main() {
-  // Mengatur style status bar agar menyatu dengan desain
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(
-    SystemUiOverlayStyle(
-      statusBarColor:
-          Colors.transparent, // Membuat background status bar transparan
-      statusBarIconBrightness:
-          Brightness.dark, // Membuat ikon (baterai, jam) menjadi hitam
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
     ),
   );
   runApp(
-    MaterialApp(
-      debugShowCheckedModeBanner:
-          false, // Menghilangkan tulisan DEBUG di kanan atas
-      home: HomePage(),
+    const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: HomePage(), // Mulai dari HomePage sebagai induk
     ),
   );
 }
 
-// [DATA BARU] Untuk item di carousel horizontal
+// HomePage sekarang menjadi "Induk" atau "Shell" untuk navigasi
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  // State untuk menyimpan index halaman yang sedang aktif
+  int _currentIndex = 0;
+
+  // 2. BUAT DAFTAR HALAMAN SESUAI URUTAN NAVBAR
+  final List<Widget> _pages = [
+    const HomePageContent(), // Konten untuk Home (index 0)
+    const NutrisiPage(), // Halaman Nutrisi (index 1)
+    const ResepkuPage(), // Halaman Resepku (index 2)
+    const BookmarkPage(), // Halaman Bookmark (index 3)
+    const ProfilePage(), // Halaman Profil (index 4)
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      // 3. BODY SEKARANG MENAMPILKAN HALAMAN DARI DAFTAR DI ATAS
+      //    BERDASARKAN `_currentIndex`
+      body: _pages[_currentIndex],
+
+      // 4. NAVBAR MENGGUNAKAN LOGIKA BARU YANG LEBIH EFISIEN
+      bottomNavigationBar: CustomNavbar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          // Cukup update state, UI akan otomatis berganti halaman
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------------
+// WIDGET BARU UNTUK KONTEN KHUSUS HALAMAN HOME
+// Semua kode UI Home Anda yang lama dipindahkan ke sini.
+// ------------------------------------------------------------------
+class HomePageContent extends StatefulWidget {
+  const HomePageContent({super.key});
+
+  @override
+  State<HomePageContent> createState() => _HomePageContentState();
+}
+
+class _HomePageContentState extends State<HomePageContent> {
+  int _currentPageIndex = 0;
+  final PageController _pageController = PageController();
+
   final List<Map<String, String>> bannerItems = [
     {
       'image': 'assets/images/ramen.jpeg',
@@ -34,31 +91,17 @@ void main() {
       'title': 'Ramen Ookamizu',
     },
     {
-      'image': 'assets/images/sushi.jpg', // GAMBAR BARU
+      'image': 'assets/images/sushi.jpg',
       'tag': 'Paling Favorit!',
       'title': 'Sushi Shinomiya',
     },
     {
-      'image': 'assets/images/cake.jpg', // GAMBAR BARU
+      'image': 'assets/images/cake.jpg',
       'tag': 'Hidangan Penutup!',
       'title': 'Cake Berry',
     },
   ];
 
-// ubah dari StatelessWidget menjadi StatefulWidget
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
-
- @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  int _currentPageIndex = 0;
-  // Controller untuk PageView
-  final PageController _pageController = PageController();
-
-  // Jangan lupa dispose controller saat widget tidak lagi digunakan
   @override
   void dispose() {
     _pageController.dispose();
@@ -68,39 +111,42 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFFFAF2), 
+      backgroundColor: const Color(0xFFFFFAF2),
       body: SafeArea(
         child: SingleChildScrollView(
-           padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Bagian Header (Halo, Wanda! & Notifikasi)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Halo, Wanda!',
+                  const Text(
+                    'Halo, Wanda!', // Nanti ini bisa kita buat dinamis
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w900, // Adjusted font weight
-                      color: Color(0xFF8B4513), // Saddle Brown color
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF8B4513),
                     ),
                   ),
                   IconButton(
-                    icon: Icon(
+                    icon: const Icon(
                       Icons.notifications_none,
                       color: Color(0xFF8B4513),
-                    ), // Saddle Brown color
+                    ),
                     onPressed: () {
-                       Navigator.push(
+                      Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const NotificationPage()),
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationPage(),
+                        ),
                       );
                     },
                   ),
                 ],
               ),
-              Text.rich(
+              const Text.rich(
                 TextSpan(
                   children: [
                     TextSpan(
@@ -115,7 +161,7 @@ class _HomePageState extends State<HomePage> {
                       text: 'Resep',
                       style: TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.bold, // Dipertebal
+                        fontWeight: FontWeight.bold,
                         color: Color(0xFF8B4513),
                       ),
                     ),
@@ -130,65 +176,58 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
               ),
-              SizedBox(height: 16.0),
+              const SizedBox(height: 16.0),
+
+              // Search Bar dan Filter
               Row(
                 children: [
-                  Expanded(
+                  const Expanded(
                     child: TextField(
                       decoration: InputDecoration(
                         hintText: 'Cari Resep',
-                        hintStyle: TextStyle(
-                          color: Colors.grey,
-                        ), // Added hint text style
+                        hintStyle: TextStyle(color: Colors.grey),
                         prefixIcon: Icon(
                           Icons.search,
                           color: Color(0xFF8B4513),
-                        ), // Changed search icon color
+                        ),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10.0),
-                          borderSide: BorderSide(color: Color(0xFF8B4513)),
+                          borderRadius: BorderRadius.all(Radius.circular(10.0)),
+                          borderSide: BorderSide.none,
                         ),
                         filled: true,
-                        fillColor: Color(0xFFFFFAF2), // Beige color
+                        fillColor: Colors.white,
                         contentPadding: EdgeInsets.symmetric(vertical: 10.0),
                       ),
                     ),
                   ),
-                  SizedBox(width: 8.0),
+                  const SizedBox(width: 8.0),
                   Container(
                     decoration: BoxDecoration(
-                      color: Color(0xFF8B4513), // Saddle Brown color
+                      color: const Color(0xFF8B4513),
                       borderRadius: BorderRadius.circular(10.0),
                     ),
                     child: IconButton(
-                      icon: Icon(Icons.tune, color: Colors.white),
-                      onPressed: () {
-                        // Handle filter icon press
-                      },
+                      icon: const Icon(Icons.tune, color: Colors.white),
+                      onPressed: () {},
                     ),
                   ),
                 ],
               ),
-              
-              // Memberi jarak antara container atas dan gambar ramen
-              SizedBox(height: 24.0),
+              const SizedBox(height: 24.0),
 
-              // Mengganti ListView dengan PageView.builder
-               SizedBox(
+              // Carousel Banner
+              SizedBox(
                 height: 200.0,
                 child: PageView.builder(
                   controller: _pageController,
                   itemCount: bannerItems.length,
-                  // Callback ini akan terpanggil setiap kali halaman berganti
                   onPageChanged: (index) {
-                    // Perbarui state dengan indeks baru, UI akan otomatis rebuild
                     setState(() {
                       _currentPageIndex = index;
                     });
                   },
                   itemBuilder: (context, index) {
                     final item = bannerItems[index];
-                    // Tambahkan padding di sini agar ada jarak antar item
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4.0),
                       child: _buildBannerCard(
@@ -200,48 +239,48 @@ class _HomePageState extends State<HomePage> {
                   },
                 ),
               ),
+              const SizedBox(height: 18.0),
 
-              SizedBox(height: 18.0),
-              // Dot Indicator yang interaktif
+              // Dot Indicator
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(bannerItems.length, (index) {
                   return Container(
-                    margin: EdgeInsets.symmetric(horizontal: 4.0),
+                    margin: const EdgeInsets.symmetric(horizontal: 4.0),
                     width: 8.0,
                     height: 8.0,
                     decoration: BoxDecoration(
-                      // Warna ditentukan oleh state _currentPageIndex
-                      color: _currentPageIndex == index
-                          ? Color(0xFF8B4513) // Warna aktif
-                          : Color.fromRGBO(230, 139, 43, 0.5), // Warna non-aktif
+                      color:
+                          _currentPageIndex == index
+                              ? const Color(0xFF8B4513)
+                              : const Color.fromRGBO(230, 139, 43, 0.5),
                       shape: BoxShape.circle,
                     ),
                   );
                 }),
               ),
-              
-              SizedBox(height: 26.0),
-          
-              Text(
+              const SizedBox(height: 26.0),
+
+              // Grid Resep Paling Diminati
+              const Text(
                 'Paling Diminati',
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w900, // Adjusted font weight
-                  color: Color(0xFF8B4513), // Saddle Brown color
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF8B4513),
                 ),
               ),
-              SizedBox(height: 16.0),
+              const SizedBox(height: 16.0),
               GridView.builder(
                 shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 16.0,
                   mainAxisSpacing: 16.0,
-                  childAspectRatio: 0.65, // Adjusted to give more vertical space
+                  childAspectRatio: 0.65,
                 ),
-                itemCount: 6, // Number of recipe cards
+                itemCount: 6, // Sesuaikan dengan jumlah resep
                 itemBuilder: (context, index) {
                   final List<Map<String, String>> recipes = [
                     {
@@ -249,7 +288,7 @@ class _HomePageState extends State<HomePage> {
                       'rating': '9.2',
                       'title': 'Risol Mayo',
                       'description':
-                          'Risol mayo adalah jajanan tradisional berbentuk gulungan yang memiliki berbagai...',
+                          'Risol mayo adalah jajanan tradisional berbentuk gulungan...',
                       'author': 'Maul - ITS',
                       'time': '20 mins',
                       'profileImagePath': 'assets/images/profilemale.jpeg',
@@ -259,7 +298,7 @@ class _HomePageState extends State<HomePage> {
                       'rating': '9.5',
                       'title': 'Nasi Padang',
                       'description':
-                          'Nasi Padang adalah makanan khas Minangkabau yang berupa nasi putih yang disajikan dengan berbagai macam',
+                          'Nasi Padang adalah makanan khas Minangkabau...',
                       'author': 'Zumar - ITS',
                       'time': '25 mins',
                       'profileImagePath': 'assets/images/profilemale.jpeg',
@@ -269,7 +308,7 @@ class _HomePageState extends State<HomePage> {
                       'rating': '8.7',
                       'title': 'Nasi Rawon',
                       'description':
-                          'Rawon adalah masakan sup daging sapi berkuah hitam yang merupakan hidangan khas Surabaya.',
+                          'Rawon adalah masakan sup daging sapi berkuah hitam...',
                       'author': 'Cindy - Unair',
                       'time': '15 mins',
                       'profileImagePath': 'assets/images/profilefemale.jpeg',
@@ -279,7 +318,7 @@ class _HomePageState extends State<HomePage> {
                       'rating': '8.5',
                       'title': 'Tahu Bakso',
                       'description':
-                          'Tahu Bakso adalah kuliner asal Semarang yang dibuat dari tahu yang tengahnya diberi isi bakso.',
+                          'Tahu Bakso adalah kuliner asal Semarang...',
                       'author': 'Ruli - ITS',
                       'time': '17 mins',
                       'profileImagePath': 'assets/images/profilemale.jpeg',
@@ -289,7 +328,7 @@ class _HomePageState extends State<HomePage> {
                       'rating': '8.9',
                       'title': 'Tahu Tek',
                       'description':
-                          'Tahu Tek adalah kuliner yang terdiri dari tahu goreng, lontong, kentang, dan sedikit taoge yang disiram...',
+                          'Tahu Tek adalah kuliner yang terdiri dari tahu goreng...',
                       'author': 'Ruli - ITS',
                       'time': '17 mins',
                       'profileImagePath': 'assets/images/profilemale.jpeg',
@@ -299,15 +338,13 @@ class _HomePageState extends State<HomePage> {
                       'rating': '9.5',
                       'title': 'Sushi',
                       'description':
-                          'Sushi adalah makanan Jepang yang terdiri dari nasi yang dibentuk bersama lauk (neta) berupa makanan laut, daging, sayuran bakar atau sudah dimasak.',
+                          'Sushi adalah makanan Jepang yang terdiri dari nasi...',
                       'author': 'Rony - Ubaya',
                       'time': '17 mins',
                       'profileImagePath': 'assets/images/profilemale.jpeg',
                     },
                   ];
-
                   final recipe = recipes[index];
-
                   return _buildRecipeCard(
                     imagePath: recipe['imagePath']!,
                     rating: recipe['rating']!,
@@ -323,142 +360,89 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
-      bottomNavigationBar: CustomNavbar(
-        currentIndex: 0,
-        onTap: (index) {
-          // Navigate to different pages
-          switch (index) {
-            case 0:
-              // Home - already here
-              break;
-            case 1:
-              // Nutrisi
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const NutrisiPage()),
-              );
-              break;
-            case 2:
-              // Resepku
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const ResepkuPage()),
-              );
-              break;
-            case 3:
-              // Bookmark
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const BookmarkPage()),
-              );
-              break;
-            case 4:
-              // Profil - belum ada halaman, skip
-              break;
-          }
-        },
+    );
+  }
+
+  // Helper widget untuk banner dan resep tidak perlu diubah
+  Widget _buildBannerCard({
+    required String image,
+    required String tag,
+    required String title,
+  }) {
+    // ... (kode banner card Anda yang lama)
+    return Container(
+      margin: const EdgeInsets.only(right: 16.0),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            spreadRadius: 2,
+            blurRadius: 10,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10.0),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(image, fit: BoxFit.cover),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: [0.4, 1.0],
+                ),
+              ),
+            ),
+            Positioned(
+              top: 10.0,
+              left: 10.0,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                decoration: BoxDecoration(
+                  color: Color(0xFFFFF2DF),
+                  borderRadius: BorderRadius.circular(5.0),
+                ),
+                child: Text(
+                  tag,
+                  style: TextStyle(
+                    color: Color(0xFF8B4513),
+                    fontSize: 12.0,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 10.0,
+              right: 10.0,
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20.0,
+                  fontWeight: FontWeight.bold,
+                  shadows: [
+                    Shadow(
+                      blurRadius: 10.0,
+                      color: Colors.black.withOpacity(0.7),
+                      offset: Offset(2.0, 2.0),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  // Untuk membuat satu item di carousel
-  Widget _buildBannerCard({
-    required String image, 
-    required String tag, 
-    required String title
-    }) {
-    return Container(
-      margin: const EdgeInsets.only(right: 16.0),
-      decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(10.0),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.3),
-          spreadRadius: 2,
-          blurRadius: 10,
-          offset: Offset(0, 5),
-        )
-      ],
-    ),
-    // Gunakan ClipRRect untuk memastikan semua anak (gambar & gradasi)
-    // ikut terpotong sesuai bentuk rounded corner.
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(10.0),
-      child: Stack(
-        fit: StackFit.expand, // Agar semua anak Stack mengisi ruang
-        children: [
-          // LAPISAN 1: GAMBAR (paling bawah)
-          Image.asset(
-            image,
-            fit: BoxFit.cover,
-          ),
-
-          // LAPISAN 2: GRADASI BAYANGAN (di tengah)
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.transparent,
-                  Colors.black.withOpacity(0.8),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                stops: [0.4, 1.0], // Bayangan baru mulai dari 40% atas
-              ),
-            ),
-          ),
-          // ==========================================================
-
-          // LAPISAN 3: TAG (paling atas)
-          Positioned(
-            top: 10.0,
-            left: 10.0,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-              decoration: BoxDecoration(
-                color: Color(0xFFFFF2DF),
-                borderRadius: BorderRadius.circular(5.0),
-              ),
-              child: Text(
-                tag,
-                style: TextStyle(
-                  color: Color(0xFF8B4513),
-                  fontSize: 12.0,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-          ),
-
-          // LAPISAN 4: JUDUL (paling atas)
-          Positioned(
-            bottom: 10.0,
-            right: 10.0,
-            child: Text(
-              title,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20.0,
-                fontWeight: FontWeight.bold,
-                // Shadow pada teks bisa dipertahankan atau dihapus
-                // karena sudah dibantu oleh gradasi background.
-                shadows: [
-                  Shadow(
-                    blurRadius: 10.0,
-                    color: Colors.black.withOpacity(0.7),
-                    offset: Offset(2.0, 2.0),
-                  )
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
- 
   Widget _buildRecipeCard({
     required String imagePath,
     required String rating,
@@ -468,6 +452,7 @@ class _HomePageState extends State<HomePage> {
     required String time,
     required String profileImagePath,
   }) {
+    // ... (kode recipe card Anda yang lama)
     return Container(
       width: 180,
       decoration: BoxDecoration(
@@ -482,14 +467,10 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-
-      // Langsung ke kontennya
       child: Column(
-        mainAxisSize:
-            MainAxisSize.min, // Membuat tinggi kartu pas dengan kontennya
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Bagian Gambar (Tidak berubah)
           Padding(
             padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 0),
             child: Container(
@@ -504,7 +485,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10.0),
                 child: Image.asset(
@@ -516,12 +496,8 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-
-          // Konten Teks
           Padding(
-            padding: const EdgeInsets.all(
-              12.0,
-            ), // Beri padding seragam di sekeliling konten teks
+            padding: const EdgeInsets.all(12.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -566,11 +542,7 @@ class _HomePageState extends State<HomePage> {
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
-
-                // Ganti Spacer() kembali menjadi SizedBox untuk jarak yang pasti
-                SizedBox(height: 14.0,),
-                
-                // Baris Avatar dan Waktu
+                SizedBox(height: 14.0),
                 Row(
                   children: [
                     CircleAvatar(
